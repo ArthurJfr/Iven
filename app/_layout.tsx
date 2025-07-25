@@ -1,16 +1,43 @@
 import { Slot, Stack } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
+import { KeyboardAvoidingView } from 'react-native';
+import BottomBar from '../components/ui/BottomBar';
+import Debugger from '../components/Debugger';
+import '../services/LoggerService'; // Initialiser le service de logs
+import React from 'react'; // Added missing import for React
 
-export default function RootLayout() {
+// Ce composant utilise le contexte
+function ThemedLayout() {
+  const { theme } = useTheme();
+  
+  // Log au démarrage de l'app
+  React.useEffect(() => {
+    console.log('🚀 Application iVent démarrée');
+    console.info('📱 Plateforme: React Native + Expo');
+    console.info('🎨 Thème actuel:', theme.background === '#fff' ? 'Light' : 'Dark');
+  }, []);
+
   return (
-    <SafeAreaProvider>  
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <Slot
             screenOptions={{
             headerShown: false,
-          }}
+            }}
         />
-    </SafeAreaProvider>
-    
+        <Debugger />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+// Le provider englobe tout
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <ThemedLayout />
+      <BottomBar />
+    </ThemeProvider>
   );
 }

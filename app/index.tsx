@@ -1,7 +1,8 @@
-import AppView from "../components/AppView";
+import HomeScreen from "../components/screens/HomeScreen";
 
 export default function Page() {
-  return <AppView />;
+
+  return <HomeScreen />;
 }
 
   
