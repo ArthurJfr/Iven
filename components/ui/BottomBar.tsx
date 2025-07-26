@@ -13,9 +13,9 @@ interface TabItem {
 
 const tabs: TabItem[] = [
   { name: "Accueil", icon: "home", href: "/" },
-  { name: "Événements", icon: "calendar", href: "/events" },
+  { name: "Événements", icon: "map-pin", href: "/events/allevents" },
+  { name: "Calendrier", icon: "calendar", href: "/calendars/calendar" },
   { name: "Settings", icon: "settings", href: "/settings" },
-  { name: "Profil", icon: "user", href: "/profile" },
 ];
 
 export default function BottomBar() {
@@ -24,7 +24,7 @@ export default function BottomBar() {
   const pathname = usePathname();
 
   return (
-    <View style={[localStyles.container, { backgroundColor: theme.background }]}>
+    <View style={localStyles.container}>
       {tabs.map((tab) => {
         const isActive = pathname === tab.href;
         return (
@@ -54,20 +54,17 @@ const localStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 16,
     paddingHorizontal: 16,
-    
-
-    elevation: 8,
+    backgroundColor: 'transparent',
   },
   tab: {
     alignItems: "center",
     flex: 1,
-    paddingVertical: 8,
+    paddingTop: 16,
   },
   tabText: {
     fontSize: 12,
     marginTop: 4,
-    fontWeight: "500",
+    fontWeight: "600",
   },
 }); 

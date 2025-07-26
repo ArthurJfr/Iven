@@ -8,7 +8,7 @@ interface DebuggerProps {
   isDebugMode?: boolean;
 }
 
-export default function Debugger({ isDebugMode = __DEV__ }: DebuggerProps) {
+export default function Debugger({ isDebugMode = false }: DebuggerProps) {
   const { theme } = useTheme();
 
   if (!isDebugMode) {
@@ -29,7 +29,7 @@ export default function Debugger({ isDebugMode = __DEV__ }: DebuggerProps) {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    top: 50,
+    top: 0,
     right: 20,
     zIndex: 1000,
   },

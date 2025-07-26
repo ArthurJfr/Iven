@@ -41,7 +41,7 @@ export default function DebuggerView() {
   };
 
   return (
-    <View style={[styles.container, { padding: 20 }]}>
+    <View style={[styles.container, { height: '100%', paddingHorizontal: 20 }]}>
       <View style={localStyles.header}>
         <Text style={styles.titleLg}>Console</Text>
         <TouchableOpacity onPress={clearLogs} style={[localStyles.clearButton, { borderColor: theme.text }]}>
@@ -49,7 +49,8 @@ export default function DebuggerView() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={localStyles.logsContainer}>
+      <ScrollView
+       style={localStyles.logsContainer}>
         {logs.map((log) => (
           <View key={log.id} style={[localStyles.logItem, { borderColor: theme.text }]}>
             <View style={localStyles.logHeader}>
@@ -77,7 +78,11 @@ export default function DebuggerView() {
 
 const localStyles = StyleSheet.create({
   header: {
-    marginBottom: 20,
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
   },
   clearButton: {
     alignSelf: 'center',
@@ -85,7 +90,7 @@ const localStyles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    marginTop: 8,
+    marginTop: 10,
   },
   clearButtonText: {
     fontSize: 12,
@@ -100,7 +105,7 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 6,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   logHeader: {
     flexDirection: 'row',

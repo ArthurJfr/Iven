@@ -13,7 +13,7 @@ function ThemedLayout() {
   
   // Log au démarrage de l'app
   React.useEffect(() => {
-    console.log('🚀 Application iVent démarrée');
+    console.log('🚀 Application Iven démarrée');
     console.info('📱 Plateforme: React Native + Expo');
     console.info('🎨 Thème actuel:', theme.background === '#fff' ? 'Light' : 'Dark');
   }, []);
@@ -28,6 +28,7 @@ function ThemedLayout() {
         />
         <Debugger />
       </KeyboardAvoidingView>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -37,7 +38,6 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <ThemedLayout />
-      <BottomBar />
     </ThemeProvider>
   );
 }

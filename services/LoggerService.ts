@@ -9,6 +9,7 @@ class LoggerService {
   private logs: LogEntry[] = [];
   private listeners: ((logs: LogEntry[]) => void)[] = [];
   private originalConsole: any = {};
+  private logCounter: number = 0;
 
   constructor() {
     this.interceptConsole();
@@ -30,7 +31,7 @@ class LoggerService {
       ).join(' ');
       
       const newLog: LogEntry = {
-        id: Date.now().toString(),
+        id: `${Date.now()}-${++this.logCounter}`,
         level,
         message,
         timestamp: new Date(),
