@@ -1,0 +1,57 @@
+[
+  {
+    "id": "1",
+    "title": "Photo de la salle de conférence",
+    "type": "image",
+    "url": "https://example.com/images/salle-conference.jpg",
+    "thumbnail": "https://example.com/thumbnails/salle-conference-thumb.jpg",
+    "eventId": "1",
+    "uploadedBy": "Marie",
+    "size": 2048576,
+    "createdAt": "05/12/2024"
+  },
+  {
+    "id": "2",
+    "title": "Présentation keynote",
+    "type": "document",
+    "url": "https://example.com/documents/presentation-keynote.pdf",
+    "thumbnail": "https://example.com/thumbnails/pdf-thumb.jpg",
+    "eventId": "2",
+    "uploadedBy": "Thomas",
+    "size": 5120000,
+    "createdAt": "08/12/2024"
+  },
+  {
+    "id": "3",
+    "title": "Vidéo de présentation",
+    "type": "video",
+    "url": "https://example.com/videos/presentation.mp4",
+    "thumbnail": "https://example.com/thumbnails/video-thumb.jpg",
+    "eventId": "2",
+    "uploadedBy": "Sophie",
+    "size": 15728640,
+    "createdAt": "10/12/2024"
+  },
+  {
+    "id": "4",
+    "title": "Podcast de l'événement",
+    "type": "audio",
+    "url": "https://example.com/audio/event-podcast.mp3",
+    "thumbnail": "https://example.com/thumbnails/audio-thumb.jpg",
+    "eventId": "1",
+    "uploadedBy": "Alex",
+    "size": 10485760,
+    "createdAt": "12/12/2024"
+  },
+  {
+    "id": "5",
+    "title": "Photos de groupe",
+    "type": "image",
+    "url": "https://example.com/images/groupe-event.jpg",
+    "thumbnail": "https://example.com/thumbnails/groupe-event-thumb.jpg",
+    "eventId": "3",
+    "uploadedBy": "Pierre",
+    "size": 3145728,
+    "createdAt": "15/12/2024"
+  }
+] 
