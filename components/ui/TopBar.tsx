@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { themedStyles } from '../../styles/global';
 
@@ -14,6 +14,7 @@ interface TopBarProps {
     onPress: () => void;
     label?: string;
   };
+
   leftAction?: {
     icon: keyof typeof Ionicons.glyphMap;
     onPress: () => void;
@@ -64,20 +65,22 @@ export default function TopBar({
       </View>
 
       <View style={localStyles.centerSection}>
-        <Text style={[localStyles.title, { color: theme.text }]} numberOfLines={1}>
-          {title}
+        <Text style={styles.titleSm} numberOfLines={1}>
+          {title} 
         </Text>
       </View>
 
       <View style={localStyles.rightSection}>
         {rightAction && (
+          <View style={{flexDirection: 'row', alignItems: 'center', minWidth: 60, justifyContent: 'flex-end'}}>       
           <TouchableOpacity
-            onPress={rightAction.onPress}
+            onPress={rightAction?.onPress}
             style={localStyles.iconButton}
-            accessibilityLabel={rightAction.label || 'Action droite'}
+            accessibilityLabel={rightAction?.label || 'Action droite'}
           >
-            <Ionicons name={rightAction.icon} size={24} color={theme.text} />
+            <Ionicons name={rightAction?.icon} size={24} color={theme.text} />
           </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>

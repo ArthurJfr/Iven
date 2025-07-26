@@ -108,6 +108,7 @@ export default function EventsTopBar({
     return undefined;
   };
 
+
   return (
     <View style={localStyles.container}>
       <TopBar
