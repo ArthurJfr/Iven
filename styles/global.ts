@@ -47,7 +47,7 @@ export const globalStyles = StyleSheet.create({
     fontSize: 32,
   },
   textMd: { 
-    fontSize: 24,
+    fontSize: 20,
   },
   textSm: {
     fontSize: 16,
