@@ -26,7 +26,7 @@ function ThemedLayout() {
             headerShown: false,
             }}
         />
-        <Debugger />
+        <Debugger isDebugMode={false} />
       </KeyboardAvoidingView>
       <BottomBar />
     </SafeAreaView>

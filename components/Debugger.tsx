@@ -8,7 +8,7 @@ interface DebuggerProps {
   isDebugMode?: boolean;
 }
 
-export default function Debugger({ isDebugMode = false }: DebuggerProps) {
+export default function Debugger({ isDebugMode }: DebuggerProps) {
   const { theme } = useTheme();
 
   if (!isDebugMode) {

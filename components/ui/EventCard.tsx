@@ -107,7 +107,7 @@ export default function EventCard({
 
       <View style={localStyles.details}>
         <View style={localStyles.detailRow}>
-          <Ionicons name="calendar" size={16} color={theme.secondary} />
+          <Ionicons name="calendar" size={16} color={theme.text} />
           <Text style={[localStyles.detailText, { color: theme.text }]}>
             {date} {time && `• ${time}`}
           </Text>
@@ -115,7 +115,7 @@ export default function EventCard({
 
         {location && (
           <View style={localStyles.detailRow}>
-            <Ionicons name="location" size={16} color={theme.secondary} />
+            <Ionicons name="location" size={16} color={theme.text} />
             <Text style={[localStyles.detailText, { color: theme.text }]} numberOfLines={1}>
               {location}
             </Text>
@@ -124,7 +124,7 @@ export default function EventCard({
 
         {maxParticipants && (
           <View style={localStyles.detailRow}>
-            <Ionicons name="people" size={16} color={theme.secondary} />
+            <Ionicons name="people" size={16} color={theme.text} />
             <Text style={[localStyles.detailText, { color: theme.text }]}>
               {participants}/{maxParticipants} participants
             </Text>
