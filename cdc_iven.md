@@ -1,353 +1,704 @@
-Cahier des Charges Détaillé – Iven (Application Mobile)
+# Cahier des Charges Détaillé – Iven (Application Mobile de Gestion d’Événements)
 
-1. Contexte et Présentation du Projet
+## 1. Contexte et Présentation du Projet
 
-Nom du Projet : Iven (Application de Gestion d’Événements)
-Contexte général : Besoin d’un outil mobile pour organiser événements personnels et professionnels dans une interface fluide.
-Origine du besoin : Centraliser création, gestion et communication autour des événements (réunions, fêtes, voyages, anniversaires).
-Enjeux métier et objectifs stratégiques :
+- **Nom du Projet :** Iven  
+- **Contexte général :** Besoin croissant d’outils mobiles pour planifier et organiser des événements personnels et professionnels.  
+- **Origine du besoin :** Les utilisateurs souhaitent centraliser la création, la gestion et la communication autour d’événements (réunions, fêtes, voyages, anniversaires) dans une interface unique.  
+- **Enjeux métier et objectifs stratégiques :**
+  - Offrir une expérience fluide du mobile natif via React Native.  
+  - Assurer la scalabilité et la performance du backend pour supporter des pics d’utilisation.  
+  - Garantir la sécurité et la confidentialité des données utilisateur.  
 
-- Expérience mobile native via React Native
-- Scalabilité backend pour gérer les pics d’usage
-- Sécurité et confidentialité des données personnelles
+## 2. Objectifs de l’application
 
-2. Objectifs de l’Application
+- **Objectifs principaux :**
+  1. Création et gestion complète d’événements (physiques ou virtuels).  
+  2. Collaboration entre participants (chat, tâches, budget).  
+  3. Centralisation des notifications et rappels.  
+- **Objectifs secondaires :**
+  - Support multi‑langue (Français, Anglais, extensible).  
+  - Mode sombre/clair.  
+  - Système de feedback et support intégré.  
+- **KPI et indicateurs :**
+  - Nombre d’événements créés par mois.  
+  - Taux d’engagement (messages envoyés, tâches complétées).  
+  - Taux de rétention mensuel.  
 
-Objectifs principaux :
+## 3. Périmètre Fonctionnel
 
-- Création et gestion complète d’événements (physiques ou virtuels)
-- Collaboration entre participants (chat, tâches, budget)
-- Notifications centralisées et rappels
+- **Module Authentification :** Inscription, connexion, mot de passe oublié, JWT.  
+- **Module Profil utilisateur :** Édition des informations, préférences (langue, thème).  
+- **Module Création & Gestion d’Événements :**
+  - Création d’un événement : titre, description, type (physique/virtuel), date/heure de début et fin.  
+  - Gestion des participants : invitations par nom d’utilisateur ou e‑mail, statut RSVP.  
+  - Tableau de bord : liste de tâches, suivi budget, médias.  
+- **Module Liste de Tâches :** Création, assignation, suivi de progression, filtres.  
+- **Module Budget :** Suivi des dépenses, contributions, répartition automatique.  
+- **Module Calendrier :** Vue mensuelle / hebdomadaire des événements à venir.  
+- **Module Chat Intégré :** Salon de discussion par événement, historique, notifications.  
+- **Module Média :** Espace de stockage par événement pour photos, images et vidéos (upload, visualisation, suppression).  
+- **Module Notifications :** Rappels, alertes d’événements, nouveaux messages.  
+- **Module Paramètres :** Gestion des préférences (langue, thème, notifications).  
+- **Feedback & Support :** Formulaire de contact, FAQ, système de tickets.  
 
-Objectifs secondaires :
+### 3.1 Cas d’Utilisation
 
-- Support multi-langue
-- Mode sombre/clair
-- Feedback intégré
+1. **Organisateur :** Créer/configurer un événement, inviter participants, gérer tâches, budget et médias.  
+2. **Participant :** Accepter invitations, communiquer via chat, consulter tâches et calendrier.  
+3. **Visiteur sans compte :** Rejoindre un événement via lien invité, consulter contenu si autorisé.  
 
-3. Périmètre Fonctionnel
+## 4. Exigences Non‑Fonctionnelles
 
-Auth & Profil utilisateur : inscription, connexion, mot de passe oublié, JWT, préférences (langue, thème).
-Gestion d’Événements : création d’événement (titre, type, dates), participants (invitation e‑mail/username), tableau de bord (tâches, budget, médias).
-Tâches : création, assignation, filtres, progression.
-Budget : suivi dépenses, contributions, répartition automatique.
-Calendrier : vue événement mensuelle/hebdomadaire.
-Chat : salon par événement, historique, notifications.
-Médias : espace de stockage par événement pour photos, images, vidéos (upload, visualisation, suppression sécurisée).
-Notifications : rappels, alertes d’événements, nouveaux messages.
-Feedback & Support : formulaire, FAQ, contact.
+- **Performances :** Temps de réponse API < 200 ms, médias servis via CDN.  
+- **Sécurité :** JWT, TLS, validation côté serveur, contrôle d’accès sur médias.  
+- **Disponibilité :** SLA 99.9 %, réplicas bases de données, redondance stockage objet.  
+- **Scalabilité :** Microservices conteneurisés (Docker/Kubernetes), auto‑scaling, CDN.  
+- **Compatibilité :** iOS 14+ et Android 8+, résolutions standards.  
+- **Accessibilité :** Conformité WCAG 2.1 niveau AA, support screen‑readers.  
 
-Cas d’usage principaux :
+## 5. Architecture Technique
 
-- Organisateur : créer, inviter participants, gérer tâches, budget et médias.
-- Participant : accepter invitations, communiquer, consulter tâches et calendrier.
-- Invité temporaire : rejoindre un événement sans compte, consulter contenu si autorisé.
+### 5.1 Schéma Global
 
-4. Exigences Non-Fonctionnelles
+- **Client mobile :** React Native + Expo Router  
+- **Backend API :** Express.js + TypeScript (Monolithique)
+- **Bases de données :** 
+  - **MySQL 8.0** : Données relationnelles (utilisateurs, événements, tâches, budget)
+  - **MongoDB 6.0** : Chat temps réel, notifications, logs
+  - **Redis 7.0** : Cache, sessions, rate limiting
+- **Stockage Objet :** AWS S3 (médias)  
+- **CDN :** CloudFront pour assets & médias  
+- **WebSocket :** Socket.io pour chat temps réel
+- **Load Balancer :** Nginx  
+- **CI/CD :** GitHub Actions → Docker → AWS ECS
 
-- Performances : API < 200 ms, médias servis via CDN
-- Sécurité : JWT, TLS, validation serveur, contrôle d’accès fichiers
-- Disponibilité : SLA 99.9 %, redondance base et stockage
-- Scalabilité : microservices Docker/Kubernetes, auto-scaling, CDN
-- Compatibilité : iOS 14+ et Android 8+, résolutions standards
-- Accessibilité : conformité WCAG 2.1 niveau AA
+### 5.2 Architecture Backend Express.js
 
-5. Architecture Technique
-
-5.1. Schéma Global
-
-Client mobile : React Native + Expo Router\
-API Gateway : Express.js\
-Microservices : Node.js (MySQL, MongoDB, Redis, RabbitMQ/Kafka)\
-Stockage objets : AWS S3 (media)\
-CDN : diffusion rapide des médias\
-Load Balancer : Nginx ou service cloud équivalent\
-CI/CD : GitHub Actions + Helm Charts sur Kubernetes
-
-5.2. Backend – Microservices
-
-- API Gateway : authentification, routage, gestion du trafic
-- Auth Service : gestion des JWT, utilisateurs, sessions (MySQL + Redis)
-- Events Service : CRUD événements/invitations, publication messages broker
-- Task & Budget Service : gestion des tâches et transactions financières, orchestration
-- Chat Service : communication temps réel via WebSocket (Socket.io), stockage MongoDB
-- Media Service : upload/download S3, vignettes, transcodage vidéo
-- Notification Service : envoi push/email via broker (FCM/APNS)
-- Monitoring & Logging : ELK, Prometheus/Grafana
-- Jobs planifiés : rappels, nettoyage via worker (Bull/Agenda.js)
-
-5.3. Architecture Express.js
-
-Structure du backend Express.js :
-```
+```plaintext
 backend/
-├── api-gateway/
-│   ├── src/
-│   │   ├── index.ts       # Point d’entrée du gateway
-│   │   ├── app.ts         # Configuration Express
-│   │   ├── routes/        # Définition des routes
-│   │   ├── controllers/   # Logique métier
-│   │   ├── services/      # Appels aux microservices et bases
-│   │   └── utils/         # Helpers et middlewares
-│   ├── Dockerfile         # Image Docker du gateway
-│   └── helm-chart/        # Déploiement Kubernetes
-├── services/
-│   ├── auth-service/      # Service d’authentification (MySQL, Redis)
-│   ├── event-service/     # CRUD événements et invitations
-│   ├── task-budget-service/# Gestion des tâches et budget
-│   ├── chat-service/      # WebSocket + MongoDB
-│   ├── media-service/     # Upload S3, transcodage, antivirus
-│   └── notification-service/ # Envoi push/email
-└── shared/
-    ├── config/            # Variables d’environnement, config globale
-    └── lib/               # Bibliothèques et utilitaires partagés
+├── src/
+│   ├── app.ts                    # Configuration Express principale
+│   ├── server.ts                 # Point d'entrée serveur
+│   ├── config/
+│   │   ├── database.ts           # Configuration MySQL/MongoDB/Redis
+│   │   ├── aws.ts                # Configuration S3
+│   │   ├── jwt.ts                # Configuration JWT
+│   │   └── socket.ts             # Configuration Socket.io
+│   ├── controllers/
+│   │   ├── auth.controller.ts    # Authentification
+│   │   ├── user.controller.ts    # Gestion utilisateurs
+│   │   ├── event.controller.ts   # CRUD événements
+│   │   ├── task.controller.ts    # Gestion tâches
+│   │   ├── budget.controller.ts  # Gestion budget
+│   │   ├── chat.controller.ts    # Chat temps réel
+│   │   ├── media.controller.ts   # Upload/download médias
+│   │   └── notification.controller.ts
+│   ├── models/
+│   │   ├── mysql/                # Modèles Sequelize
+│   │   │   ├── User.ts
+│   │   │   ├── Event.ts
+│   │   │   ├── EventParticipant.ts
+│   │   │   ├── Task.ts
+│   │   │   ├── Budget.ts
+│   │   │   ├── BudgetTransaction.ts
+│   │   │   └── Media.ts
+│   │   └── mongodb/              # Modèles Mongoose
+│   │       ├── Message.ts
+│   │       ├── Notification.ts
+│   │       └── ActivityLog.ts
+│   ├── routes/
+│   │   ├── index.ts              # Routes principales
+│   │   ├── auth.routes.ts
+│   │   ├── user.routes.ts
+│   │   ├── event.routes.ts
+│   │   ├── task.routes.ts
+│   │   ├── budget.routes.ts
+│   │   ├── chat.routes.ts
+│   │   ├── media.routes.ts
+│   │   └── notification.routes.ts
+│   ├── middleware/
+│   │   ├── auth.middleware.ts    # Vérification JWT
+│   │   ├── validation.middleware.ts # Validation Joi
+│   │   ├── rate-limit.middleware.ts # Rate limiting
+│   │   ├── upload.middleware.ts  # Multer pour upload
+│   │   └── error.middleware.ts   # Gestion erreurs
+│   ├── services/
+│   │   ├── auth.service.ts       # Logique métier auth
+│   │   ├── event.service.ts      # Logique métier événements
+│   │   ├── notification.service.ts # Push notifications
+│   │   ├── email.service.ts      # Envoi emails
+│   │   ├── s3.service.ts         # Upload S3
+│   │   └── socket.service.ts     # Gestion Socket.io
+│   ├── utils/
+│   │   ├── logger.ts             # Winston logging
+│   │   ├── validator.ts          # Schémas Joi
+│   │   ├── crypto.ts             # Chiffrement/Hash
+│   │   └── helpers.ts            # Fonctions utilitaires
+│   ├── types/
+│   │   ├── express.d.ts          # Extensions Express
+│   │   ├── auth.types.ts
+│   │   ├── event.types.ts
+│   │   └── api.types.ts
+│   └── sockets/
+│       ├── chat.socket.ts        # Gestion chat temps réel
+│       └── notification.socket.ts
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+├── docs/
+│   ├── api.md                    # Documentation API
+│   └── deployment.md
+├── scripts/
+│   ├── migration.sql             # Scripts MySQL
+│   └── seed.ts                   # Données de test
+├── docker/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── nginx.conf
+├── package.json
+├── tsconfig.json
+├── jest.config.js
+└── .env.example
 ```
 
-TypeScript strict, tests unitaires par service, Dockerfile et Helm Chart pour chaque module.
+### 5.3 Schémas de Base de Données
 
-5.4 Architecture Frontend Mobile. Architecture Frontend Mobile (React Native + Expo Router)
-
-Technologies clés : React Native (Expo), Expo Router, TypeScript, React Query, Nativewind, Expo ImagePicker, Axios, React Hook Form, Zod
-
-Structure de l’application :
-```
-iven/
-├── app/
-│   ├── index.tsx          # Point d’entrée de l’application
-│   ├── login.tsx          # Écran de connexion
-│   ├── register.tsx       # Écran d’inscription
-│   ├── settings.tsx       # Paramètres utilisateur
-│   ├── events/            # Dossier par événement
-│   │   └── [eventId]/
-│   │       ├── index.tsx  # Détail général de l’événement
-│   │       ├── tasks.tsx  # Gestion des tâches
-│   │       ├── budget.tsx # Gestion du budget
-│   │       ├── media.tsx  # Galerie médias
-│   │       └── chat.tsx   # Salon de discussion
-│   └── create-event.tsx   # Création d’un nouvel événement
-├── components/
-│   ├── screens/           # Écrans principaux
-│   ├── ui/                # Composants UI réutilisables
-│   ├── events/            # Composants spécifiques aux événements
-│   ├── media/             # Composants spécifiques aux médias
-│   ├── chat/              # Composants spécifiques au chat
-│   └── hooks/             # Hooks personnalisés
-├── services/              # Appels API
-├── contexts/              # Contexts globaux (auth, thème)
-├── store/                 # Gestion d’état (Redux / Zustand)
-├── types/                 # Types TypeScript partagés
-├── utils/                 # Fonctions utilitaires
-└── assets/                # Ressources statiques (images, icônes)
-```
-
-Fonctionnement du module média :
-- Sélection de photos/vidéos via expo-image-picker
-- Requête pour URL présignée + upload direct sur S3
-- Affichage dynamique de la galerie via React Query et WebSocket (invalidation cache)
-
-5.5. Schéma de Base de Données Schéma de Base de Données
-
-5.5.1. Schéma MySQL amélioré
+#### 5.3.1 MySQL - Données Relationnelles
 
 ```sql
--- Table users
+-- Utilisateurs
 CREATE TABLE users (
-  id             BIGINT       AUTO_INCREMENT PRIMARY KEY,
-  username       VARCHAR(50)  NOT NULL UNIQUE,
-  email          VARCHAR(100) NOT NULL UNIQUE,
-  password_hash  VARCHAR(255) NOT NULL,
-  lang           VARCHAR(8)   NOT NULL DEFAULT 'en',
-  theme          ENUM('light','dark') NOT NULL DEFAULT 'light',
-  created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_users_created (created_at)
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    avatar_url VARCHAR(500),
+    bio TEXT,
+    language ENUM('fr', 'en') DEFAULT 'fr',
+    theme ENUM('light', 'dark') DEFAULT 'light',
+    email_notifications BOOLEAN DEFAULT true,
+    push_notifications BOOLEAN DEFAULT true,
+    email_verified BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    last_login_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_active (is_active)
 );
 
--- Table events
+-- Événements
 CREATE TABLE events (
-  id            BIGINT       AUTO_INCREMENT PRIMARY KEY,
-  organizer_id  BIGINT       NOT NULL,
-  title         VARCHAR(150) NOT NULL,
-  type          ENUM('physical','virtual') NOT NULL,
-  start_date    DATETIME     NOT NULL,
-  end_date      DATETIME     NOT NULL,
-  created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_events_user FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_events_organizer (organizer_id),
-  INDEX idx_events_period (start_date, end_date)
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    end_date DATE,
+    end_time TIME,
+    location VARCHAR(300) NOT NULL,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    type ENUM('physique', 'virtuel') NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    status ENUM('upcoming', 'ongoing', 'completed', 'cancelled') DEFAULT 'upcoming',
+    visibility ENUM('public', 'private') DEFAULT 'private',
+    max_participants INT,
+    allow_invites BOOLEAN DEFAULT true,
+    organizer_id VARCHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_organizer (organizer_id),
+    INDEX idx_date (date),
+    INDEX idx_status (status),
+    INDEX idx_category (category)
 );
 
--- Table participants
-CREATE TABLE participants (
-  id          BIGINT      AUTO_INCREMENT PRIMARY KEY,
-  event_id    BIGINT      NOT NULL,
-  user_id     BIGINT      NULL,
-  email       VARCHAR(100) NULL,
-  role        ENUM('organizer','participant','temporary') NOT NULL DEFAULT 'participant',
-  status      ENUM('pending','accepted','declined') NOT NULL DEFAULT 'pending',
-  token       CHAR(36)    NOT NULL,
-  invited_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_part_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
-  CONSTRAINT fk_part_user  FOREIGN KEY (user_id)  REFERENCES users(id) ON DELETE SET NULL,
-  UNIQUE KEY uq_event_user_email (event_id, COALESCE(user_id, email)),
-  INDEX idx_part_status (status),
-  INDEX idx_part_token  (token)
+-- Participants aux événements
+CREATE TABLE event_participants (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    event_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    role ENUM('organizer', 'participant') DEFAULT 'participant',
+    status ENUM('pending', 'accepted', 'declined') DEFAULT 'pending',
+    invited_by VARCHAR(36),
+    invited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    responded_at TIMESTAMP NULL,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_participant (event_id, user_id),
+    INDEX idx_event_user (event_id, user_id),
+    INDEX idx_status (status)
 );
 
--- Table tasks
+-- Tâches
 CREATE TABLE tasks (
-  id           BIGINT       AUTO_INCREMENT PRIMARY KEY,
-  event_id     BIGINT       NOT NULL,
-  title        VARCHAR(150) NOT NULL,
-  description  TEXT,
-  assignee_id  BIGINT       NULL,
-  status       ENUM('todo','in_progress','done') NOT NULL DEFAULT 'todo',
-  due_date     DATETIME     NULL,
-  created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_tasks_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
-  CONSTRAINT fk_tasks_user  FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_tasks_event (event_id),
-  INDEX idx_tasks_status (due_date, status)
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    event_id VARCHAR(36) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    assigned_to VARCHAR(36),
+    priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
+    status ENUM('pending', 'in_progress', 'completed') DEFAULT 'pending',
+    due_date DATETIME,
+    completed_at TIMESTAMP NULL,
+    created_by VARCHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_event (event_id),
+    INDEX idx_assigned (assigned_to),
+    INDEX idx_status (status),
+    INDEX idx_due_date (due_date)
 );
 
--- Tables budgets & contributions
+-- Budget d'événement
 CREATE TABLE budgets (
-  id         BIGINT       AUTO_INCREMENT PRIMARY KEY,
-  event_id   BIGINT       NOT NULL UNIQUE,
-  total      DECIMAL(12,2) NOT NULL CHECK (total >= 0),
-  created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_budg_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    event_id VARCHAR(36) NOT NULL UNIQUE,
+    total_budget DECIMAL(10, 2) DEFAULT 0.00,
+    currency VARCHAR(3) DEFAULT 'EUR',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
-CREATE TABLE contributions (
-  id              BIGINT       AUTO_INCREMENT PRIMARY KEY,
-  budget_id       BIGINT       NOT NULL,
-  contributor_id  BIGINT       NOT NULL,
-  amount          DECIMAL(12,2) NOT NULL CHECK (amount > 0),
-  created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_contr_budget FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
-  CONSTRAINT fk_contr_user   FOREIGN KEY (contributor_id) REFERENCES users(id) ON DELETE RESTRICT,
-  INDEX idx_contr_budget (budget_id),
-  INDEX idx_contr_user   (contributor_id)
+-- Transactions budgétaires
+CREATE TABLE budget_transactions (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    budget_id VARCHAR(36) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    amount DECIMAL(10, 2) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    type ENUM('expense', 'income') DEFAULT 'expense',
+    paid_by VARCHAR(36),
+    receipt_url VARCHAR(500),
+    transaction_date DATE NOT NULL,
+    created_by VARCHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
+    FOREIGN KEY (paid_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_budget (budget_id),
+    INDEX idx_category (category),
+    INDEX idx_date (transaction_date)
 );
 
--- Table messages
-CREATE TABLE messages (
-  id           BIGINT       AUTO_INCREMENT PRIMARY KEY,
-  event_id     BIGINT       NOT NULL,
-  sender_id    BIGINT       NOT NULL,
-  content      TEXT         NOT NULL,
-  created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_msg_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
-  CONSTRAINT fk_msg_user  FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_msg_event_time (event_id, created_at)
+-- Médias
+CREATE TABLE media (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    event_id VARCHAR(36) NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    size INT NOT NULL,
+    s3_key VARCHAR(500) NOT NULL,
+    s3_url VARCHAR(500) NOT NULL,
+    thumbnail_url VARCHAR(500),
+    type ENUM('image', 'video', 'document') NOT NULL,
+    uploaded_by VARCHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_event (event_id),
+    INDEX idx_type (type),
+    INDEX idx_uploaded_by (uploaded_by)
 );
 
--- Table media_items
-CREATE TABLE media_items (
-  id           BIGINT       AUTO_INCREMENT PRIMARY KEY,
-  event_id     BIGINT       NOT NULL,
-  url          VARCHAR(500) NOT NULL,
-  type         ENUM('image','video') NOT NULL,
-  uploaded_by  BIGINT       NOT NULL,
-  uploaded_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_media_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
-  CONSTRAINT fk_media_user  FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_media_event_time (event_id, uploaded_at),
-  INDEX idx_media_type (type)
+-- Sessions utilisateur (optionnel si pas Redis)
+CREATE TABLE user_sessions (
+    id VARCHAR(128) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    data TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id),
+    INDEX idx_expires (expires_at)
 );
 ```
 
-5.5.2. Modélisation MongoDB
+#### 5.3.2 MongoDB - Données Non-Relationnelles
 
-```js
-// Collection chats
+```javascript
+// Collection: messages (Chat temps réel)
 {
-  _id: ObjectId("..."),
-  eventId: NumberLong("123"),
-  participants: [ { userId: NumberLong("1"), username: "alice" }, ... ],
-  messages: [
-    { _id: ObjectId(), senderId: NumberLong("1"), content: "...", createdAt: ISODate("2025-07-28T10:15:00Z"), attachments: [...] },
-    ...
-  ],
-  updatedAt: ISODate("2025-07-28T10:16:00Z")
+  _id: ObjectId,
+  eventId: String,           // Référence à l'événement MySQL
+  senderId: String,          // Référence utilisateur MySQL
+  senderName: String,        // Dénormalisé pour performance
+  senderAvatar: String,      // Dénormalisé pour performance
+  type: String,              // 'text', 'image', 'file', 'system'
+  content: String,           // Contenu du message
+  metadata: {                // Métadonnées selon le type
+    filename: String,        // Pour les fichiers
+    fileSize: Number,
+    fileUrl: String,
+    mentions: [String],      // IDs des utilisateurs mentionnés
+    replyTo: ObjectId        // ID du message parent
+  },
+  reactions: [{              // Réactions aux messages
+    userId: String,
+    emoji: String,
+    timestamp: Date
+  }],
+  isEdited: Boolean,
+  editedAt: Date,
+  isDeleted: Boolean,
+  deletedAt: Date,
+  readBy: [{                 // Statut de lecture
+    userId: String,
+    readAt: Date
+  }],
+  createdAt: Date,
+  updatedAt: Date
 }
 
-// Indexes
-// db.chats.createIndex({ eventId: 1 });
-// db.chats.createIndex({ "messages.createdAt": 1 });
+// Index pour messages
+db.messages.createIndex({ "eventId": 1, "createdAt": -1 })
+db.messages.createIndex({ "senderId": 1 })
+db.messages.createIndex({ "createdAt": -1 })
 
-// Pour gros volumes, séparer messages :
-// Collection chats sans messages + Collection messages avec chatId
-// Indexes messages : chatId, createdAt, senderId
-
-// Collection media
+// Collection: notifications
 {
-  _id: ObjectId("..."),
-  eventId: NumberLong("123"),
-  uploader: { userId: NumberLong("2"), username: "bob" },
-  type: "video",
-  originalUrl: "s3://bucket/abcd.mp4",
-  presignedUrl: "https://...",
-  thumbnails: [ { size: "small", url: "..." }, ... ],
-  status: "ready",
-  errorMsg: null,
-  uploadedAt: ISODate("..."),
-  processedAt: ISODate("...")
+  _id: ObjectId,
+  userId: String,            // Destinataire
+  type: String,              // 'event_invite', 'task_assigned', 'message', 'reminder'
+  title: String,
+  body: String,
+  data: {                    // Données contextuelles
+    eventId: String,
+    taskId: String,
+    senderId: String,
+    actionUrl: String
+  },
+  status: String,            // 'pending', 'sent', 'delivered', 'read'
+  channels: [String],        // 'push', 'email', 'in_app'
+  scheduledFor: Date,        // Pour notifications programmées
+  sentAt: Date,
+  readAt: Date,
+  createdAt: Date,
+  updatedAt: Date
 }
 
-// Indexes
-// db.media.createIndex({ eventId: 1 });
-// db.media.createIndex({ status: 1 });
-// db.media.createIndex({ "thumbnails.size": 1 });
+// Index pour notifications
+db.notifications.createIndex({ "userId": 1, "status": 1 })
+db.notifications.createIndex({ "scheduledFor": 1 })
+db.notifications.createIndex({ "createdAt": -1 })
+
+// Collection: activity_logs (Audit trail)
+{
+  _id: ObjectId,
+  userId: String,
+  action: String,            // 'create', 'update', 'delete', 'login'
+  resource: String,          // 'event', 'task', 'budget', 'user'
+  resourceId: String,
+  changes: {                 // Détails des modifications
+    before: Object,
+    after: Object
+  },
+  metadata: {
+    ip: String,
+    userAgent: String,
+    location: String
+  },
+  timestamp: Date
+}
+
+// Index pour logs
+db.activity_logs.createIndex({ "userId": 1, "timestamp": -1 })
+db.activity_logs.createIndex({ "action": 1, "resource": 1 })
+db.activity_logs.createIndex({ "timestamp": -1 })
+
+// Collection: file_uploads (Métadonnées temporaires)
+{
+  _id: ObjectId,
+  uploadId: String,          // ID unique de l'upload
+  userId: String,
+  eventId: String,
+  filename: String,
+  mimeType: String,
+  size: Number,
+  chunks: [{                 // Pour upload en chunks
+    chunkNumber: Number,
+    chunkSize: Number,
+    uploaded: Boolean
+  }],
+  status: String,            // 'uploading', 'completed', 'failed'
+  s3Key: String,
+  progress: Number,          // Pourcentage
+  error: String,
+  createdAt: Date,
+  completedAt: Date,
+  expiresAt: Date            // TTL pour nettoyage automatique
+}
+
+// TTL Index pour nettoyage automatique
+db.file_uploads.createIndex({ "expiresAt": 1 }, { expireAfterSeconds: 0 })
 ```
 
-6. UI / UX & Design
+### 5.4 Configuration Redis
 
-Charte graphique : bleu/blanc, typo sans-serif
-Wireframes Figma (splash, auth, dashboard, détail événement, galerie média)
-Navigation fluide en ≤ 3 clics
-Accessibilité mobile (WCAG 2.1, compatibilité screen readers, thème global)
+```typescript
+// Structure des clés Redis
+const REDIS_KEYS = {
+  // Sessions utilisateur
+  SESSION: 'session:',
+  
+  // Cache
+  USER_CACHE: 'user:',
+  EVENT_CACHE: 'event:',
+  EVENT_PARTICIPANTS: 'event:participants:',
+  
+  // Rate limiting
+  RATE_LIMIT: 'rate_limit:',
+  
+  // Notifications push
+  DEVICE_TOKENS: 'device_tokens:',
+  
+  // Chat
+  ONLINE_USERS: 'online_users',
+  TYPING_USERS: 'typing:',
+  
+  // Upload temporaire
+  UPLOAD_TOKEN: 'upload_token:',
+  
+  // Réinitialisation mot de passe
+  RESET_TOKEN: 'reset_token:',
+  
+  // Vérification email
+  EMAIL_VERIFICATION: 'email_verify:'
+};
 
-7. Plan de Tests & Validation
+// Configuration TTL
+const TTL = {
+  SESSION: 7 * 24 * 60 * 60,        // 7 jours
+  USER_CACHE: 60 * 60,              // 1 heure
+  EVENT_CACHE: 30 * 60,             // 30 minutes
+  RATE_LIMIT: 60 * 60,              // 1 heure
+  UPLOAD_TOKEN: 10 * 60,            // 10 minutes
+  RESET_TOKEN: 15 * 60,             // 15 minutes
+  EMAIL_VERIFICATION: 24 * 60 * 60  // 24 heures
+};
+```
 
-Tests unitaires : Jest (backend), React Native Testing Library (frontend)
-Tests d’intégration : Supertest, Postman
-Tests e2e : Detox
-Tests de performance : k6 (API), profiling React Native
-Critères d’acceptation via user stories précises
+### 5.5 API REST Endpoints
 
-8. Déploiement & Exploitation
+```typescript
+// Routes principales
+POST   /api/auth/register          // Inscription
+POST   /api/auth/login             // Connexion
+POST   /api/auth/logout            // Déconnexion
+POST   /api/auth/refresh           // Renouveler JWT
+POST   /api/auth/forgot-password   // Mot de passe oublié
+POST   /api/auth/reset-password    // Réinitialiser mot de passe
 
-CI/CD : GitHub Actions → build Docker → tests → déploiement via Helm Charts (Kubernetes)
-Environnements: dev, staging, production
-Monitoring : Prometheus, Grafana, alertes
-Logs centralisés via ELK stack
-Support incident : alertes Slack/email, plan de reprise
+GET    /api/users/profile          // Profil utilisateur
+PUT    /api/users/profile          // Modifier profil
+POST   /api/users/avatar           // Upload avatar
+DELETE /api/users/account          // Supprimer compte
 
-9. Planning & Ressources
+GET    /api/events                 // Liste événements
+POST   /api/events                 // Créer événement
+GET    /api/events/:id             // Détails événement
+PUT    /api/events/:id             // Modifier événement
+DELETE /api/events/:id             // Supprimer événement
 
-Phase 1 (3 semaines) : setup environnement, auth, profil
-Phase 2 (5 semaines) : gestion des événements & participants
-Phase 3 (4 semaines) : tâches & budget
-Phase 4 (3 semaines) : chat, médias, notifications
-Phase 5 (3 semaines) : tests, optimisation, déploiement
-Total : 18 semaines (\~360 J/H)
-Ressource : 1 développeur full-stack (toi, développeur étudiant)
+POST   /api/events/:id/participants // Inviter participants
+PUT    /api/events/:id/participants/:userId // Modifier statut participation
+DELETE /api/events/:id/participants/:userId // Retirer participant
 
-10. Sécurité & Confidentialité
+GET    /api/events/:id/tasks       // Liste tâches
+POST   /api/events/:id/tasks       // Créer tâche
+PUT    /api/tasks/:id              // Modifier tâche
+DELETE /api/tasks/:id              // Supprimer tâche
 
-RGPD : droit accès, portabilité, suppression
-Sauvegardes : journalières MySQL, continues MongoDB
-Mots de passe hachés (bcrypt), TLS partout
-Audit & tests de pénétration réguliers
-RBAC déployé au niveau Kubernetes et des services
+GET    /api/events/:id/budget      // Budget événement
+PUT    /api/events/:id/budget      // Modifier budget
+POST   /api/events/:id/budget/transactions // Ajouter transaction
+PUT    /api/budget/transactions/:id // Modifier transaction
+DELETE /api/budget/transactions/:id // Supprimer transaction
 
-11. Annexes
+GET    /api/events/:id/media       // Liste médias
+POST   /api/events/:id/media       // Upload média
+DELETE /api/media/:id              // Supprimer média
 
-Glossaire technique
-Diagrammes : ERD, séquence upload média
-Maquettes Figma, documentation API
-Contacts : toi-même (développeur étudiant)
+GET    /api/events/:id/messages    // Historique chat
+POST   /api/events/:id/messages    // Nouveau message
+PUT    /api/messages/:id           // Modifier message
+DELETE /api/messages/:id           // Supprimer message
 
+GET    /api/notifications          // Liste notifications
+PUT    /api/notifications/:id/read // Marquer comme lu
+POST   /api/notifications/device   // Enregistrer token device
+```
+
+### 5.6 WebSocket Events (Socket.io)
+
+```typescript
+// Événements Socket.io
+namespace '/events/:eventId' {
+  // Connection/Déconnection
+  'join_event'     // Rejoindre chat événement
+  'leave_event'    // Quitter chat événement
+  
+  // Chat temps réel
+  'new_message'    // Nouveau message
+  'message_edited' // Message modifié
+  'message_deleted' // Message supprimé
+  'typing_start'   // Utilisateur tape
+  'typing_stop'    // Utilisateur arrête de taper
+  'message_read'   // Message lu
+  
+  // Notifications temps réel
+  'participant_joined'  // Nouveau participant
+  'participant_left'    // Participant parti
+  'task_updated'        // Tâche modifiée
+  'budget_updated'      // Budget modifié
+  'event_updated'       // Événement modifié
+  
+  // Statut utilisateurs
+  'user_online'    // Utilisateur en ligne
+  'user_offline'   // Utilisateur hors ligne
+}
+```
+
+Cette architecture monolithique Express.js offre une base solide tout en restant évolutive vers des microservices si nécessaire.
+
+### 5.4 Architecture du Projet Frontend Mobile (React Native + Expo Router)
+
+#### Technologies Principales
+
+- React Native (Expo)  
+- Expo Router (filesystem routing)  
+- TypeScript  
+- React Query  
+- Nativewind (Tailwind CSS)  
+- Expo ImagePicker  
+- Axios  
+- React Hook Form + Zod  
+
+#### Structure des Dossiers
+
+```plaintext
+frontend/
+├── app/                            # Routes Expo Router
+│   ├── +layout.tsx                 # Layout global (theme, AuthContext…)
+│   ├── index.tsx                   # Home (dashboard)
+│   ├── login.tsx
+│   ├── register.tsx
+│   ├── profile.tsx
+│   ├── settings.tsx
+│   ├── create-event.tsx
+│   └── events/
+│       └── [eventId]/              # Dossier dynamique
+│           ├── index.tsx           # Résumé de l’événement
+│           ├── tasks.tsx           # Liste des tâches
+│           ├── budget.tsx          # Budget collaboratif
+│           ├── media.tsx           # Galerie média
+│           ├── chat.tsx            # Chat de l’événement
+│           └── manage.tsx          # Paramètres de l’événement
+├── components/
+│   ├── screens/                    # Écrans avec logique métier
+│   ├── ui/                         # Composants génériques (Button, Input…)
+│   ├── events/                     # EventCard, EventHeader…
+│   ├── media/                      # MediaUploader, MediaGrid…
+│   ├── chat/                       # MessageBubble, ChatInput…
+│   └── hooks/                      # useAuth, useEvent, useUpload…
+├── services/                       # api.ts, auth.ts, event.ts, media.ts…
+├── contexts/                       # AuthContext, ThemeContext…
+├── store/                          # Zustand/Redux (état UI, offline…)
+├── types/                          # Typages partagés
+├── utils/                          # formatDate, debounce…
+├── assets/                         # Icônes, images, polices
+└── app.config.ts                   # Configuration Expo
+```
+
+#### Module Média
+
+- L’utilisateur sélectionne via `expo-image-picker` (photos/vidéos).  
+- `uploadMedia(eventId, file)` obtient une presigned URL et uploade sur S3.  
+- `MediaScreen` affiche la galerie par événement, rafraîchie via React Query et WebSocket.  
+
+## 6. UI / UX et Design
+
+### 6.1 Charte Graphique
+
+- **Palette de couleurs :**  
+  - Bleu primaire : `#1E40AF`  
+  - Bleu secondaire : `#3B82F6`  
+  - Gris clair : `#F3F4F6`  
+  - Gris foncé : `#4B5563`  
+  - Blanc : `#FFFFFF`  
+- **Typographie :**  
+  - Police principale : *Inter* (sans‑serif)  
+  - Tailles :  
+    - H1 : 24 pt  
+    - H2 : 20 pt  
+    - Corps : 16 pt  
+- **Iconographie :** Feather Icons (monochrome, style fin)  
+- **Guidelines :**  
+  - Contraste WCAG AA  
+  - Espacements (8 pt/16 pt)  
+  - Boutons arrondis (rayon 8 pt)  
+  - Feedback tactile et visuel (pressState, spinner)  
+
+### 6.2 Maquettes & Wireframes
+
+- **Outil :** Figma  
+- **Écrans clés :** Splash, Auth, Dashboard, Détail événement, Galerie média, Formulaire création  
+- **Flux utilisateur :** ≤ 3 taps pour chaque fonction majeure  
+
+## 7. Plan de Tests et Validation
+
+- Tests unitaires : Jest (backend), React Native Testing Library (frontend)  
+- Tests d’intégration : Supertest, Postman  
+- Tests E2E : Detox  
+- Tests performance : k6, profiling RN  
+- Critères d’acceptation : définis par user stories  
+
+## 8. Déploiement et Exploitation
+
+- CI/CD : GitHub Actions → Docker → Helm → Kubernetes  
+- Environnements : dev, staging, prod  
+- Monitoring : Prometheus, Grafana, Sentry  
+- Logging : ELK Stack  
+- Alerting : Slack/Email  
+- Support & Maintenance : SLA, procédures de rollback  
+
+## 9. Planning et Ressources
+
+| Phase   | Durée      | Objectifs                            |
+|---------|------------|--------------------------------------|
+| Phase 1 | 3 semaines | Setup env, Auth, Profil             |
+| Phase 2 | 5 semaines | Événements & Participants            |
+| Phase 3 | 4 semaines | Tâches & Budget                      |
+| Phase 4 | 3 semaines | Chat, Médias, Notifications          |
+| Phase 5 | 3 semaines | Tests, Optimisation, Déploiement     |
+
+- **Total :** 18 semaines (~360 J/H)  
+- **Ressource :** 1 développeur full‑stack (étudiant)  
+
+## 10. Sécurité et Confidentialité
+
+- **RGPD :** droit d’accès, portabilité, suppression  
+- **Sauvegardes :** journalières MySQL, continues MongoDB  
+- **Chiffrement :** TLS, bcrypt  
+- **Audits & Pentests :** réguliers  
+- **RBAC :** configuré dans Kubernetes et services  
+
+## 11. Annexes
+
+- Glossaire  
+- Diagrammes ERD, séquence upload média  
+- Maquettes Figma, docs API  
+- Contact : développeur étudiant  
