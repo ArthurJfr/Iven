@@ -1,43 +1,32 @@
-import { Slot, Stack } from 'expo-router';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
-import { KeyboardAvoidingView } from 'react-native';
-import BottomBar from '../components/ui/BottomBar';
-import Debugger from '../components/Debugger';
-import '../services/LoggerService'; // Initialiser le service de logs
-import React from 'react'; // Added missing import for React
+import { Stack } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { createThemedStyles } from '../styles';
 
-// Ce composant utilise le contexte
-function ThemedLayout() {
+function RootStack() {
   const { theme } = useTheme();
-  
-  // Log au démarrage de l'app
-  React.useEffect(() => {
-    console.log('🚀 Application Iven démarrée');
-    console.info('📱 Plateforme: React Native + Expo');
-    console.info('🎨 Thème actuel:', theme.background === '#fff' ? 'Light' : 'Dark');
-  }, []);
+  const themedStyles = createThemedStyles(theme);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <Slot
-            screenOptions={{
-            headerShown: false,
-            }}
-        />
-        <Debugger isDebugMode={false} />
-      </KeyboardAvoidingView>
-      <BottomBar />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: [
+            themedStyles.surface,
+            { flex: 1 }
+          ],
+          animation: 'slide_from_right',
+        }}
+      />
+    </SafeAreaProvider>
   );
 }
 
-// Le provider englobe tout
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <ThemedLayout />
+      <RootStack />
     </ThemeProvider>
   );
 }

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
-import { themedStyles } from "../../styles/global";
+import { createThemedStyles, spacing } from "../../styles";
 import { Feather } from "@expo/vector-icons";
 import { Link, usePathname } from "expo-router";
 
@@ -13,31 +13,36 @@ interface TabItem {
 
 const tabs: TabItem[] = [
   { name: "Accueil", icon: "home", href: "/" },
-  { name: "Événements", icon: "map-pin", href: "/events/allevents" },
-  { name: "Calendrier", icon: "calendar", href: "/calendars/calendar" },
-  { name: "Settings", icon: "settings", href: "/settings" },
+  { name: "Événements", icon: "calendar", href: "/events" },
+  { name: "Calendrier", icon: "clock", href: "/calendars" },
+  { name: "Profil", icon: "user", href: "/profile" },
 ];
 
 export default function BottomBar() {
   const { theme } = useTheme();
-  const styles = themedStyles(theme);
+  const themedStyles = createThemedStyles(theme);
   const pathname = usePathname();
 
   return (
-    <View style={localStyles.container}>
+    <View style={[
+      localStyles.container, 
+      { backgroundColor: theme.background, borderTopColor: theme.border }
+    ]}>
       {tabs.map((tab) => {
-        const isActive = pathname === tab.href;
+        const isActive = pathname === tab.href || 
+          (tab.href !== "/" && pathname.startsWith(tab.href));
+        
         return (
           <Link key={tab.name} href={tab.href} asChild>
             <TouchableOpacity style={localStyles.tab}>
               <Feather
                 name={tab.icon}
-                size={24}
-                color={isActive ? theme.primary : theme.text}
+                size={22}
+                color={isActive ? theme.primary : theme.textSecondary}
               />
               <Text style={[
                 localStyles.tabText,
-                { color: isActive ? theme.primary : theme.text }
+                { color: isActive ? theme.primary : theme.textSecondary }
               ]}>
                 {tab.name}
               </Text>
@@ -52,19 +57,17 @@ export default function BottomBar() {
 const localStyles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    backgroundColor: 'transparent',
+    paddingTop: 8,
   },
   tab: {
-    alignItems: "center",
     flex: 1,
-    paddingTop: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
   },
   tabText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
     fontWeight: "600",
+    textAlign: "center",
   },
 }); 

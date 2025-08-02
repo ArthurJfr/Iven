@@ -1,30 +1,16 @@
 // contexts/ThemeContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Appearance } from "react-native";
+import { lightTheme, darkTheme, Theme } from "../styles/themes";
 
-const themes = {
-  light: {
-    background: "#fff",
-    text: "#222",
-    buttonText: "#fff",
-    primary: "#2563eb",
-    secondary: "#222",
-    tertiary: "#333",
-    switch: "#222", 
-  },
-  dark: {
-    background: "#18181b",
-    text: "#fff",
-    buttonText: "#fff",
-    primary: "#2563eb",
-    secondary: "#222",
-    tertiary: "#333",
-    switch: "#222", 
-  },
-};
+interface ThemeContextType {
+  theme: Theme;
+  mode: "light" | "dark";
+  toggleTheme: () => void;
+}
 
-const ThemeContext = createContext({
-  theme: themes.light,
+const ThemeContext = createContext<ThemeContextType>({
+  theme: lightTheme,
   mode: "light",
   toggleTheme: () => {},
 });
@@ -45,8 +31,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     return prev === "light" ? "dark" : "light";
   });
 
+  const currentTheme = mode === "light" ? lightTheme : darkTheme;
+
   return (
-    <ThemeContext.Provider value={{ theme: themes[mode], mode, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: currentTheme, mode, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

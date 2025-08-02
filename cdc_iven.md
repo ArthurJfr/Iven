@@ -590,38 +590,274 @@ Cette architecture monolithique Express.js offre une base solide tout en restant
 #### Structure des Dossiers
 
 ```plaintext
-frontend/
-├── app/                            # Routes Expo Router
-│   ├── +layout.tsx                 # Layout global (theme, AuthContext…)
-│   ├── index.tsx                   # Home (dashboard)
-│   ├── login.tsx
-│   ├── register.tsx
-│   ├── profile.tsx
-│   ├── settings.tsx
-│   ├── create-event.tsx
-│   └── events/
-│       └── [eventId]/              # Dossier dynamique
-│           ├── index.tsx           # Résumé de l’événement
-│           ├── tasks.tsx           # Liste des tâches
-│           ├── budget.tsx          # Budget collaboratif
-│           ├── media.tsx           # Galerie média
-│           ├── chat.tsx            # Chat de l’événement
-│           └── manage.tsx          # Paramètres de l’événement
+Iven/
+├── app/                               # Routes Expo Router
+│   ├── (auth)/                        # Groupe routes authentification
+│   │   ├── _layout.tsx                # Layout auth + KeyboardAvoidingView
+│   │   ├── login.tsx                  # Connexion
+│   │   ├── register.tsx               # Inscription
+│   │   └── forgot-password.tsx        # Mot de passe oublié
+│   ├── (tabs)/                        # Groupe routes avec tabs
+│   │   ├── _layout.tsx                # Bottom tabs + KeyboardAvoidingView
+│   │   ├── index.tsx                  # Home/Dashboard
+│   │   ├── events/
+│   │   │   ├── _layout.tsx            # Stack navigation événements
+│   │   │   ├── index.tsx              # Liste événements (allevents)
+│   │   │   └── [id]/                  # Événement dynamique
+│   │   │       ├── _layout.tsx        # Tabs événement
+│   │   │       ├── index.tsx          # Résumé de l'événement
+│   │   │       ├── tasks.tsx          # Liste des tâches
+│   │   │       ├── budget.tsx         # Budget collaboratif
+│   │   │       ├── media.tsx          # Galerie média
+│   │   │       ├── chat.tsx           # Chat de l'événement
+│   │   │       └── manage.tsx         # Paramètres de l'événement
+│   │   ├── tasks/                     # Section tâches globales
+│   │   │   ├── index.tsx              # Liste toutes les tâches
+│   │   │   └── [id].tsx               # Détail tâche individuelle
+│   │   ├── media/                     # Section médias globaux
+│   │   │   ├── index.tsx              # Galerie tous médias
+│   │   │   └── [id].tsx               # Visualiseur média individuel
+│   │   ├── users/                     # Section utilisateurs
+│   │   │   ├── index.tsx              # Liste/recherche utilisateurs
+│   │   │   └── [id].tsx               # Profil utilisateur public
+│   │   ├── calendar/
+│   │   │   └── index.tsx              # Vue calendrier
+│   │   └── profile/
+│   │       ├── index.tsx              # Profil utilisateur connecté
+│   │       └── settings.tsx           # Paramètres app
+│   ├── modals/                        # Modales (présentation modale)
+│   │   ├── create-event.tsx           # Création événement
+│   │   ├── edit-profile.tsx           # Édition profil
+│   │   ├── media-viewer.tsx           # Visualiseur média plein écran
+│   │   ├── invite-participants.tsx    # Invitation participants
+│   │   ├── task-detail.tsx            # Détail/édition tâche
+│   │   └── expense-form.tsx           # Ajout/édition dépense
+│   ├── notifications/                 # Notifications
+│   │   └── index.tsx                  # Liste notifications
+│   ├── _layout.tsx                    # Layout global (providers + KeyboardAvoidingView)
+│   └── +not-found.tsx                 # Page 404
 ├── components/
-│   ├── screens/                    # Écrans avec logique métier
-│   ├── ui/                         # Composants génériques (Button, Input…)
-│   ├── events/                     # EventCard, EventHeader…
-│   ├── media/                      # MediaUploader, MediaGrid…
-│   ├── chat/                       # MessageBubble, ChatInput…
-│   └── hooks/                      # useAuth, useEvent, useUpload…
-├── services/                       # api.ts, auth.ts, event.ts, media.ts…
-├── contexts/                       # AuthContext, ThemeContext…
-├── store/                          # Zustand/Redux (état UI, offline…)
-├── types/                          # Typages partagés
-├── utils/                          # formatDate, debounce…
-├── assets/                         # Icônes, images, polices
-└── app.config.ts                   # Configuration Expo
-```
+│   ├── ui/                            # Design System (Atomic Design)
+│   │   ├── atoms/                     # Composants de base
+│   │   │   ├── Button.tsx             # Boutons avec variantes
+│   │   │   ├── Input.tsx              # Champs de saisie
+│   │   │   ├── Text.tsx               # Texte avec styles
+│   │   │   ├── Avatar.tsx             # Avatar utilisateur
+│   │   │   ├── Badge.tsx              # Badges/étiquettes
+│   │   │   ├── Spinner.tsx            # Indicateur de chargement
+│   │   │   ├── Icon.tsx               # Icônes avec thème
+│   │   │   └── Divider.tsx            # Séparateurs
+│   │   ├── molecules/                 # Composants composés
+│   │   │   ├── Card.tsx               # Cartes avec variantes
+│   │   │   ├── Modal.tsx              # Modales
+│   │   │   ├── SearchBar.tsx          # Barre de recherche
+│   │   │   ├── DatePicker.tsx         # Sélecteur de date
+│   │   │   ├── ImagePicker.tsx        # Sélecteur d'images
+│   │   │   ├── LoadingOverlay.tsx     # Overlay de chargement
+│   │   │   ├── EmptyState.tsx         # État vide
+│   │   │   └── ErrorBoundary.tsx      # Gestion d'erreurs
+│   │   └── organisms/                 # Composants complexes
+│   │       ├── Header.tsx             # En-têtes
+│   │       ├── BottomTabs.tsx         # Navigation tabs
+│   │       ├── ParticipantsList.tsx   # Liste participants
+│   │       └── NotificationBanner.tsx # Bannières notifications
+│   ├── features/                      # Composants par fonctionnalité
+│   │   ├── auth/
+│   │   │   ├── LoginForm.tsx          # Formulaire connexion
+│   │   │   ├── RegisterForm.tsx       # Formulaire inscription
+│   │   │   ├── AuthGuard.tsx          # Protection routes
+│   │   │   └── SocialLogin.tsx        # Connexion sociale (optionnel)
+│   │   ├── events/
+│   │   │   ├── EventCard.tsx          # Carte événement
+│   │   │   ├── EventForm.tsx          # Formulaire événement
+│   │   │   ├── EventHeader.tsx        # En-tête événement
+│   │   │   ├── EventList.tsx          # Liste événements
+│   │   │   ├── ParticipantCard.tsx    # Carte participant
+│   │   │   ├── InviteModal.tsx        # Modal invitation
+│   │   │   └── EventFilters.tsx       # Filtres événements
+│   │   ├── tasks/
+│   │   │   ├── TaskCard.tsx           # Carte tâche
+│   │   │   ├── TaskForm.tsx           # Formulaire tâche
+│   │   │   ├── TaskList.tsx           # Liste tâches
+│   │   │   └── TaskFilters.tsx        # Filtres tâches
+│   │   ├── budget/
+│   │   │   ├── BudgetSummary.tsx      # Résumé budget
+│   │   │   ├── ExpenseCard.tsx        # Carte dépense
+│   │   │   ├── ExpenseForm.tsx        # Formulaire dépense
+│   │   │   └── BudgetChart.tsx        # Graphique budget (optionnel)
+│   │   ├── media/
+│   │   │   ├── MediaGrid.tsx          # Grille médias
+│   │   │   ├── MediaCard.tsx          # Carte média
+│   │   │   ├── MediaUploader.tsx      # Upload média
+│   │   │   ├── MediaViewer.tsx        # Visualiseur média
+│   │   │   └── MediaFilters.tsx       # Filtres médias
+│   │   ├── chat/
+│   │   │   ├── MessageBubble.tsx      # Bulle de message
+│   │   │   ├── MessageInput.tsx       # Saisie message
+│   │   │   ├── MessageList.tsx        # Liste messages
+│   │   │   ├── TypingIndicator.tsx    # Indicateur frappe
+│   │   │   └── ChatHeader.tsx         # En-tête chat
+│   │   ├── calendar/
+│   │   │   ├── CalendarView.tsx       # Vue calendrier
+│   │   │   ├── EventCalendar.tsx      # Calendrier événements
+│   │   │   └── DateSelector.tsx       # Sélecteur date
+│   │   └── profile/
+│   │       ├── ProfileHeader.tsx      # En-tête profil
+│   │       ├── ProfileForm.tsx        # Formulaire profil
+│   │       ├── SettingsSection.tsx    # Section paramètres
+│   │       └── AvatarUpload.tsx       # Upload avatar
+│   ├── screens/                       # Écrans avec logique métier (existant)
+│   │   ├── HomeScreen.tsx             # Écran d'accueil
+│   │   ├── LoginScreen.tsx            # Écran connexion
+│   │   ├── RegisterScreen.tsx         # Écran inscription
+│   │   ├── EventsScreen.tsx           # Écran événements
+│   │   ├── ProfileScreen.tsx          # Écran profil
+│   │   └── SettingsScreen.tsx         # Écran paramètres
+│   └── providers/                     # Providers HOC (optionnel)
+│       ├── QueryProvider.tsx          # React Query wrapper
+│       └── AuthGuardProvider.tsx      # Protection routes wrapper
+├── hooks/                             # Hooks personnalisés
+│   ├── api/                           # Hooks API (React Query)
+│   │   ├── useAuth.ts                 # Authentification
+│   │   ├── useEvents.ts               # Événements
+│   │   ├── useTasks.ts                # Tâches
+│   │   ├── useBudget.ts               # Budget
+│   │   ├── useMedia.ts                # Médias
+│   │   ├── useChat.ts                 # Chat
+│   │   ├── useNotifications.ts        # Notifications
+│   │   └── useUsers.ts                # Utilisateurs
+│   ├── ui/                            # Hooks UI/UX (essentiels)
+│   │   ├── usePermissions.ts          # Permissions (caméra, localisation)
+│   │   ├── useImagePicker.ts          # Sélection images/vidéos
+│   │   ├── useDebounce.ts             # Debounce recherche
+│   │   └── useHaptics.ts              # Retour haptique (optionnel)
+│   └── utils/                         # Hooks utilitaires (core)
+│       ├── useStorage.ts              # AsyncStorage helpers
+│       ├── useNetworkStatus.ts        # État réseau (mode offline)
+│       └── useLocation.ts             # Géolocalisation
+├── services/                          # Services & API
+│   ├── api/
+│   │   ├── client.ts                  # Configuration Axios
+│   │   ├── auth.service.ts            # API authentification
+│   │   ├── events.service.ts          # API événements
+│   │   ├── tasks.service.ts           # API tâches
+│   │   ├── budget.service.ts          # API budget
+│   │   ├── media.service.ts           # API médias + S3
+│   │   ├── chat.service.ts            # API chat
+│   │   ├── notifications.service.ts   # API notifications
+│   │   └── users.service.ts           # API utilisateurs
+│   ├── storage/
+│   │   ├── secureStorage.ts           # Keychain/Keystore (tokens)
+│   │   ├── asyncStorage.ts            # AsyncStorage helpers
+│   │   └── cacheStorage.ts            # Cache local (optionnel)
+│   ├── notifications/
+│   │   ├── pushNotifications.ts       # Push notifications
+│   │   └── localNotifications.ts      # Notifications locales
+│   ├── media/
+│   │   ├── imageProcessor.ts          # Traitement images (resize, etc.)
+│   │   └── fileUpload.ts              # Upload S3 avec presigned URLs
+│   ├── socket/
+│   │   ├── socketClient.ts            # Client Socket.io
+│   │   └── chatSocket.ts              # Gestion chat temps réel
+│   ├── LoggerService.ts               # Logging (existant)
+│   └── utils/
+│       ├── analytics.ts               # Analytics (optionnel)
+│       └── crashlytics.ts             # Crash reporting (optionnel)
+├── contexts/                          # Contextes React
+│   ├── ThemeContext.tsx               # Thème (existant)
+│   ├── AuthContext.tsx                # Authentification
+│   ├── SocketContext.tsx              # WebSocket connexion
+│   ├── NotificationContext.tsx        # Notifications in-app
+│   └── index.ts                       # Exports centralisés
+├── store/                             # Gestion d'état (Zustand)
+│   ├── slices/
+│   │   ├── authSlice.ts               # État authentification
+│   │   ├── eventsSlice.ts             # État événements
+│   │   ├── chatSlice.ts               # État chat (messages, typing)
+│   │   ├── uiSlice.ts                 # État UI (modales, notifications)
+│   │   └── offlineSlice.ts            # État hors ligne (optionnel)
+│   ├── middleware/
+│   │   ├── persistMiddleware.ts       # Persistance état
+│   │   └── devtoolsMiddleware.ts      # Redux DevTools
+│   ├── selectors/
+│   │   ├── authSelectors.ts           # Sélecteurs auth
+│   │   ├── eventsSelectors.ts         # Sélecteurs événements
+│   │   └── chatSelectors.ts           # Sélecteurs chat
+│   └── index.ts                       # Store principal
+├── types/                             # Types TypeScript
+│   ├── api/                           # Types API
+│   │   ├── auth.types.ts              # Types authentification
+│   │   ├── events.types.ts            # Types événements (existant)
+│   │   ├── tasks.types.ts             # Types tâches (existant)
+│   │   ├── budget.types.ts            # Types budget
+│   │   ├── media.types.ts             # Types médias
+│   │   ├── chat.types.ts              # Types chat
+│   │   ├── notifications.types.ts     # Types notifications
+│   │   └── common.types.ts            # Types communs (API responses, etc.)
+│   ├── navigation.types.ts            # Types navigation Expo Router
+│   ├── storage.types.ts               # Types stockage
+│   ├── users.ts                       # Types utilisateurs (existant)
+│   ├── categories.ts                  # Types catégories (existant)
+│   └── global.d.ts                    # Types globaux
+├── utils/                             # Utilitaires
+│   ├── formatters/
+│   │   ├── date.ts                    # Formatage dates
+│   │   ├── currency.ts                # Formatage monnaie
+│   │   ├── text.ts                    # Formatage texte
+│   │   └── fileSize.ts                # Formatage taille fichiers
+│   ├── validators/
+│   │   ├── schemas.ts                 # Schémas Zod validation
+│   │   ├── rules.ts                   # Règles validation
+│   │   └── sanitizers.ts              # Nettoyage données
+│   ├── constants/
+│   │   ├── colors.ts                  # Couleurs design system
+│   │   ├── sizes.ts                   # Tailles et espacements
+│   │   ├── typography.ts              # Polices et tailles texte
+│   │   ├── config.ts                  # Configuration app
+│   │   └── endpoints.ts               # URLs API
+│   ├── helpers/
+│   │   ├── permissions.ts             # Gestion permissions
+│   │   ├── platform.ts                # Détection plateforme iOS/Android
+│   │   ├── device.ts                  # Informations device
+│   │   ├── navigation.ts              # Helpers navigation
+│   │   └── error.ts                   # Gestion erreurs
+│   └── transformers/
+│       ├── apiTransformers.ts         # Transformation données API
+│       └── dataMappers.ts             # Mapping données
+├── styles/                            # Styles et thèmes
+│   ├── themes/
+│   │   ├── light.ts                   # Thème clair
+│   │   ├── dark.ts                    # Thème sombre
+│   │   └── index.ts                   # Export thèmes
+│   ├── tokens/                        # Design tokens
+│   │   ├── colors.ts                  # Palette couleurs
+│   │   ├── typography.ts              # Système typographique
+│   │   ├── spacing.ts                 # Espacements
+│   │   ├── shadows.ts                 # Ombres
+│   │   └── borders.ts                 # Bordures et radius
+│   ├── global.ts                      # Styles globaux (existant)
+│   └── animations.ts                  # Animations réutilisables
+├── data/                              # Données mock/statiques (existant)
+│   ├── events.json                    # Événements mock
+│   ├── users.json                     # Utilisateurs mock
+│   ├── tasks.json                     # Tâches mock
+│   ├── categories.json                # Catégories
+│   └── media.json                     # Médias mock
+├── assets/                            # Ressources statiques
+│   ├── images/                        # Images de l'app
+│   ├── icons/                         # Icônes personnalisées
+│   ├── fonts/                         # Polices personnalisées (optionnel)
+│   └── animations/                    # Animations Lottie (optionnel)
+├── __tests__/                         # Tests (optionnel pour MVP)
+│   ├── components/                    # Tests composants
+│   ├── hooks/                         # Tests hooks
+│   ├── services/                      # Tests services
+│   └── __mocks__/                     # Mocks pour tests
+├── babel.config.js                    # Configuration Babel
+├── tailwind.config.js                 # Configuration Tailwind
+├── app.json                           # Configuration Expo
+├── tsconfig.json                      # Configuration TypeScript
+└── package.json                       # Dépendances projet
 
 #### Module Média
 
