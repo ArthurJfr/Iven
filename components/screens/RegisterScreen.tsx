@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, SafeAreaView  } from "react-native";
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, SafeAreaView, Alert } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
 import { createThemedStyles, layoutStyles, spacing } from "../../styles";
 import Input from "../ui/Input";
@@ -7,6 +7,8 @@ import Button from "../ui/Button";
 import ErrorText from "../ui/ErrorText";
 import Text from "../ui/atoms/Text";
 import { Link, useRouter } from "expo-router";
+import { authService } from "../../services/AuthService";
+import type { RegisterRequest } from "../../types/auth";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function RegisterScreen() {
@@ -16,8 +18,9 @@ export default function RegisterScreen() {
 
   // États du formulaire
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    username: "",
+    fname: "",
+    lname: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -55,12 +58,27 @@ export default function RegisterScreen() {
   };
 
   const validateForm = () => {
-    if (!formData.firstName.trim()) {
+    if (!formData.username.trim()) {
+      setFormState(prev => ({ ...prev, error: "Le nom d'utilisateur est requis." }));
+      return false;
+    }
+
+    if (formData.username.length < 3) {
+      setFormState(prev => ({ ...prev, error: "Le nom d'utilisateur doit contenir au moins 3 caractères." }));
+      return false;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      setFormState(prev => ({ ...prev, error: "Le nom d'utilisateur ne peut contenir que des lettres, chiffres et underscores." }));
+      return false;
+    }
+
+    if (!formData.fname.trim()) {
       setFormState(prev => ({ ...prev, error: "Le prénom est requis." }));
       return false;
     }
 
-    if (!formData.lastName.trim()) {
+    if (!formData.lname.trim()) {
       setFormState(prev => ({ ...prev, error: "Le nom est requis." }));
       return false;
     }
@@ -102,12 +120,39 @@ export default function RegisterScreen() {
     setFormState(prev => ({ ...prev, loading: true, error: "" }));
 
     try {
-      // Simulation d'appel API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Inscription réussie - redirection
-      router.replace("/(tabs)");
+      const registerData: RegisterRequest = {
+        username: formData.username,
+        fname: formData.fname,
+        lname: formData.lname,
+        email: formData.email,
+        password: formData.password,
+      };
+
+      const response = await authService.register(registerData);
+
+      if (response.success) {
+        // Inscription réussie - redirection vers la confirmation
+        Alert.alert(
+          "Inscription réussie !",
+          "Un email de confirmation a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception.",
+          [
+            {
+              text: "Continuer",
+              onPress: () => router.push({
+                pathname: "/(auth)/confirm-account",
+                params: { email: formData.email }
+              })
+            }
+          ]
+        );
+      } else {
+        setFormState(prev => ({ 
+          ...prev, 
+          error: response.error || "Une erreur est survenue lors de l'inscription. Veuillez réessayer." 
+        }));
+      }
     } catch (error) {
+      console.error("Erreur inscription:", error);
       setFormState(prev => ({ 
         ...prev, 
         error: "Une erreur est survenue lors de l'inscription. Veuillez réessayer." 
@@ -192,8 +237,8 @@ export default function RegisterScreen() {
                   label="Prénom"
                   placeholder="Jean"
                   autoCapitalize="words"
-                  value={formData.firstName}
-                  onChangeText={(value) => handleInputChange('firstName', value)}
+                  value={formData.fname}
+                  onChangeText={(value) => handleInputChange('fname', value)}
                   required
                 />
               </View>
@@ -202,11 +247,24 @@ export default function RegisterScreen() {
                   label="Nom"
                   placeholder="Dupont"
                   autoCapitalize="words"
-                  value={formData.lastName}
-                  onChangeText={(value) => handleInputChange('lastName', value)}
+                  value={formData.lname}
+                  onChangeText={(value) => handleInputChange('lname', value)}
                   required
                 />
               </View>
+            </View>
+
+            {/* Nom d'utilisateur */}
+            <View>
+              <Input
+                label="Nom d'utilisateur"
+                placeholder="johndoe123"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={formData.username}
+                onChangeText={(value) => handleInputChange('username', value)}
+                required
+              />
             </View>
 
             {/* Email */}

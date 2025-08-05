@@ -19,6 +19,7 @@ const routes: Route[] = [
   { name: 'Connexion', path: '/login', group: 'Auth', icon: 'log-in-outline', description: 'Page de connexion' },
   { name: 'Inscription', path: '/register', group: 'Auth', icon: 'person-add-outline', description: 'Page d\'inscription' },
   { name: 'Mot de passe oublié', path: '/forgot-password', group: 'Auth', icon: 'mail-outline', description: 'Réinitialisation mot de passe' },
+  { name: 'Confirmation Compte', path: '/confirm-account', group: 'Auth', icon: 'checkmark-circle-outline', description: 'Confirmation de compte' },
   
   // Main Routes
   { name: 'Accueil', path: '/', group: 'Principal', icon: 'home-outline', description: 'Page d\'accueil' },

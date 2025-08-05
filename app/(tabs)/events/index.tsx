@@ -5,18 +5,22 @@ import { Ionicons } from '@expo/vector-icons';
 import events from '../../../data/events.json';
 import Header from '../../../components/ui/organisms/Header';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import Card from '../../../components/ui/Card';
+import ProtectedRoute from '../../../components/ProtectedRoute';
 
 export default function EventsListScreen() {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const router = useRouter();
 
   const mockEvents = events;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Header */}
-      <Header
+    <ProtectedRoute requireAuth={true}>
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
+        {/* Header */}
+        <Header
         title="Mes Événements"
         rightAction={{
           icon: "add-circle",
@@ -63,5 +67,6 @@ export default function EventsListScreen() {
         ))}
       </ScrollView>
     </View>
+    </ProtectedRoute>
   );
 } 

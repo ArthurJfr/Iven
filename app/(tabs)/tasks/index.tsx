@@ -2,9 +2,12 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../../contexts/AuthContext';
+import ProtectedRoute from '../../../components/ProtectedRoute';
 
 export default function TasksScreen() {
   const router = useRouter();
+  const { user } = useAuth();
 
   const mockTasks = [
     {
@@ -52,7 +55,8 @@ export default function TasksScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFF' }}>
+    <ProtectedRoute requireAuth={true}>
+      <View style={{ flex: 1, backgroundColor: '#FFF' }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 }}>
         <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Mes Tâches</Text>
@@ -130,5 +134,6 @@ export default function TasksScreen() {
         ))}
       </ScrollView>
     </View>
+    </ProtectedRoute>
   );
 } 

@@ -1,16 +1,20 @@
 import React, { useState } from "react";
-import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from "react-native";
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { createThemedStyles, layoutStyles, spacing } from "../../styles";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import ErrorText from "../ui/ErrorText";
 import Text from "../ui/atoms/Text";
 import { Link, useRouter } from "expo-router";
+import { authService } from "../../services/AuthService";
+import type { LoginRequest } from "../../types/auth";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const { theme } = useTheme();
+  const { login } = useAuth();
   const themedStyles = createThemedStyles(theme);
   const router = useRouter();
   
@@ -18,6 +22,7 @@ export default function LoginScreen() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    rememberMe: false,
   });
   
   const [formState, setFormState] = useState({
@@ -71,19 +76,83 @@ export default function LoginScreen() {
     setFormState(prev => ({ ...prev, loading: true, error: "" }));
     
     try {
-      // Simulation d'appel API
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      const loginData: LoginRequest = {
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      };
+
+      const response = await authService.login(loginData);
       
-      if (formData.email === "test@iven.com" && formData.password === "password") {
-        // Connexion réussie - redirection
-        router.replace("/(tabs)");
+      if (response.success) {
+        // Vérifier si le compte est confirmé
+        if (response.data?.user.active) {
+          // Connexion réussie - mise à jour du contexte
+          console.log('✅ Connexion réussie, compte confirmé');
+          await login(response.data.user, response.data.token);
+          
+          // Redirection manuelle pour s'assurer qu'elle se fait
+          router.replace("/(tabs)");
+        } else {
+          // Compte non confirmé mais identifiants valides
+          console.log('⚠️ Identifiants valides mais compte non confirmé');
+          
+          // Redirection automatique vers la confirmation après un court délai
+          Alert.alert(
+            "🔐 Activation requise",
+            `Connexion réussie ! Cependant, votre compte n'est pas encore activé.\n\nNous vous redirigeons vers la page d'activation pour finaliser votre inscription.`,
+            [
+              {
+                text: "Activer maintenant",
+                onPress: () => {
+                  console.log('👤 Redirection vers activation de compte');
+                  router.push({
+                    pathname: "/(auth)/confirm-account",
+                    params: { 
+                      email: formData.email,
+                      fromLogin: 'true' // Indiquer qu'on vient du login
+                    }
+                  });
+                }
+              },
+              {
+                text: "Plus tard",
+                style: "cancel",
+                onPress: () => {
+                  console.log('⏰ Activation reportée');
+                  // Optionnel : proposer un rappel
+                }
+              }
+            ]
+          );
+        }
       } else {
+        // Analyser le type d'erreur pour donner un message plus précis
+        const errorMessage = response.error || "Email ou mot de passe incorrect.";
+        console.error('❌ Échec de la connexion:', errorMessage);
+        
+        // Différents messages selon le type d'erreur
+        let userFriendlyMessage = errorMessage;
+        
+        if (errorMessage.toLowerCase().includes('not found') || 
+            errorMessage.toLowerCase().includes('incorrect') ||
+            errorMessage.toLowerCase().includes('invalid')) {
+          userFriendlyMessage = "Email ou mot de passe incorrect. Vérifiez vos informations.";
+        } else if (errorMessage.toLowerCase().includes('locked') || 
+                   errorMessage.toLowerCase().includes('suspended')) {
+          userFriendlyMessage = "Votre compte a été temporairement suspendu. Contactez le support.";
+        } else if (errorMessage.toLowerCase().includes('network') || 
+                   errorMessage.toLowerCase().includes('connection')) {
+          userFriendlyMessage = "Problème de connexion. Vérifiez votre internet et réessayez.";
+        }
+        
         setFormState(prev => ({ 
           ...prev, 
-          error: "Email ou mot de passe incorrect." 
+          error: userFriendlyMessage
         }));
       }
     } catch (error) {
+      console.error("Erreur connexion:", error);
       setFormState(prev => ({ 
         ...prev, 
         error: "Une erreur est survenue. Veuillez réessayer." 

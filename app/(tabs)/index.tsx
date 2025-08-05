@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -9,18 +9,40 @@ import Card from '../../components/ui/Card';
 import Header from '../../components/ui/organisms/Header';
 import Avatar from '../../components/ui/atoms/Avatar';
 import Badge from '../../components/ui/atoms/Badge';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const themedStyles = createThemedStyles(theme);
 
-  // Mock data - à remplacer par de vraies données
-  const user = {
-    firstName: 'Arthur',
-    lastName: 'Jaffro',
-    avatar: null,
+  // Utiliser le contexte d'authentification
+  const { user, logout } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    
+    // Ici vous pourrez ajouter le chargement des événements depuis l'API
+    // await loadEvents();
+    
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
   };
+
+  // Fallback si pas d'utilisateur connecté
+  if (!user) {
+    return (
+      <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
+        <View style={[layoutStyles.center, { flex: 1 }]}>
+          <Text variant="body" color="secondary">
+            Aucun utilisateur connecté
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const upcomingEvents = [
     {
@@ -76,7 +98,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
       <Header 
-        title="Iven" 
+        title={`Iven`}
         rightAction={{
           icon: "notifications-outline",
           onPress: () => router.push('/notifications')
@@ -87,6 +109,14 @@ export default function HomeScreen() {
         style={[layoutStyles.container]} 
         contentContainerStyle={{ paddingBottom: spacing[8] }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
       >
         {/* Section de bienvenue avec avatar */}
         <View style={{ paddingHorizontal: spacing[5], paddingTop: spacing[4], paddingBottom: spacing[6] }}>
@@ -102,8 +132,23 @@ export default function HomeScreen() {
                 Bonjour,
               </Text>
               <Text variant="h2" weight="bold">
-                {user.firstName} {user.lastName} 👋
+                {user.fname} {user.lname} 👋
               </Text>
+              <View style={[layoutStyles.row, { alignItems: 'center', marginTop: spacing[1] }]}>
+                <Text variant="caption" color="secondary">
+                  @{user.username}
+                </Text>
+                <View style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: user.active ? '#34C759' : '#FF9500',
+                  marginLeft: spacing[2]
+                }} />
+                <Text variant="caption" color="secondary" style={{ marginLeft: spacing[1] }}>
+                  {user.active ? 'Vérifié' : 'En attente'}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -233,36 +278,139 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Section développement (à supprimer en prod) */}
+        {/* Section paramètres et outils */}
         <View style={{ paddingHorizontal: spacing[5] }}>
-          <TouchableOpacity onPress={() => router.push('/ui-test')}>
-            <Card variant="outlined" padding="medium">
-              <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                <View style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: theme.backgroundSecondary,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: spacing[3]
-                }}>
-                  <Ionicons name="color-palette" size={20} color={theme.primary} />
+          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[4] }}>
+            Paramètres
+          </Text>
+          
+          <View style={{ gap: spacing[3] }}>
+            {/* Profil utilisateur */}
+            <TouchableOpacity onPress={() => router.push('/profile')}>
+              <Card variant="outlined" padding="medium">
+                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: theme.primary + '15',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: spacing[3]
+                  }}>
+                    <Ionicons name="person" size={20} color={theme.primary} />
+                  </View>
+                  
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="medium">
+                      Mon profil
+                    </Text>
+                    <Text variant="small" color="secondary">
+                      {user.email}
+                    </Text>
+                  </View>
+                  
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </View>
-                
-                <View style={{ flex: 1 }}>
-                  <Text variant="caption" weight="medium">
-                    UI Components Showcase
-                  </Text>
-                  <Text variant="small" color="secondary">
-                    Mode développement
-                  </Text>
+              </Card>
+            </TouchableOpacity>
+
+            {/* Mode développement */}
+            <TouchableOpacity onPress={() => router.push('/ui-test')}>
+              <Card variant="outlined" padding="medium">
+                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: theme.backgroundSecondary,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: spacing[3]
+                  }}>
+                    <Ionicons name="color-palette" size={20} color={theme.primary} />
+                  </View>
+                  
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="medium">
+                      UI Components Showcase
+                    </Text>
+                    <Text variant="small" color="secondary">
+                      Mode développement
+                    </Text>
+                  </View>
+                  
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </View>
-                
-                <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-              </View>
-            </Card>
-          </TouchableOpacity>
+              </Card>
+            </TouchableOpacity>
+
+            {/* Test Auth */}
+            <TouchableOpacity onPress={() => router.push('/test-auth')}>
+              <Card variant="outlined" padding="medium">
+                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#4ECDC4' + '15',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: spacing[3]
+                  }}>
+                    <Ionicons name="shield-checkmark" size={20} color="#4ECDC4" />
+                  </View>
+                  
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="medium">
+                      Tests d'authentification
+                    </Text>
+                    <Text variant="small" color="secondary">
+                      Debug auth & sessions
+                    </Text>
+                  </View>
+                  
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </View>
+              </Card>
+            </TouchableOpacity>
+
+            {/* Déconnexion */}
+            <TouchableOpacity 
+              onPress={async () => {
+                console.log('🚪 Déconnexion...');
+                await logout();
+                // La redirection sera gérée par AuthInitializer
+              }}
+            >
+              <Card variant="outlined" padding="medium">
+                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#FF453A' + '15',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: spacing[3]
+                  }}>
+                    <Ionicons name="log-out" size={20} color="#FF453A" />
+                  </View>
+                  
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="medium" style={{ color: '#FF453A' }}>
+                      Se déconnecter
+                    </Text>
+                    <Text variant="small" color="secondary">
+                      Revenir à l'écran de connexion
+                    </Text>
+                  </View>
+                  
+                  <Ionicons name="log-out" size={16} color="#FF453A" />
+                </View>
+              </Card>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

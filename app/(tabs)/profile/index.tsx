@@ -1,30 +1,42 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { createThemedStyles, layoutStyles, spacing } from '../../../styles';
 import Text from '../../../components/ui/atoms/Text';
 import Card from '../../../components/ui/Card';
 import Avatar from '../../../components/ui/atoms/Avatar';
 import ToggleTheme from '../../../components/ui/ToggleTheme';
 import Header from '../../../components/ui/organisms/Header';
+import ProtectedRoute from '../../../components/ProtectedRoute';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { user, logout } = useAuth();
   const themedStyles = createThemedStyles(theme);
 
-  const mockUser = {
-    firstName: 'Arthur',
-    lastName: 'Jaffre',
-    email: 'arthur.jaffre@example.com',
-    phone: '+33 6 12 34 56 78',
-    bio: 'Passionné d\'événements et de rencontres',
-    eventsCreated: 12,
-    eventsParticipated: 28,
-    tasksCompleted: 45,
-    avatar: null,
+  const handleLogout = async () => {
+    Alert.alert(
+      "Déconnexion",
+      "Êtes-vous sûr de vouloir vous déconnecter ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel"
+        },
+        {
+          text: "Déconnexion",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            console.log('👋 Utilisateur déconnecté depuis ProfileScreen');
+          }
+        }
+      ]
+    );
   };
 
   const settingSections = [
@@ -89,15 +101,24 @@ export default function ProfileScreen() {
           action: () => {},
           component: null
         },
+        { 
+          icon: 'log-out-outline', 
+          title: 'Se déconnecter', 
+          subtitle: 'Quitter l\'application',
+          action: handleLogout,
+          component: null,
+          color: '#FF453A'
+        },
       ]
     }
   ];
 
   return (
-    <View style={[layoutStyles.container, themedStyles.surface]}>
-      <Header 
-        title="Mon profil"
-      />
+    <ProtectedRoute requireAuth={true}>
+      <View style={[layoutStyles.container, themedStyles.surface]}>
+        <Header 
+          title="Mon profil"
+        />
       
       <ScrollView 
         style={layoutStyles.container}
@@ -117,19 +138,34 @@ export default function ProfileScreen() {
               <View style={[layoutStyles.row, { alignItems: 'center', marginBottom: spacing[5] }]}>
                 <Avatar
                   size="xlarge"
-                  source={mockUser.avatar ? { uri: mockUser.avatar } : undefined}
+                  source={user?.avatar ? { uri: user.avatar } : undefined}
                   fallbackIcon="person"
                   style={{ marginRight: spacing[5] }}
                 />
                 <View style={{ flex: 1 }}>
                   <Text variant="h1" weight="bold" style={{ marginBottom: spacing[1] }}>
-                    {mockUser.firstName}
+                    {user?.fname}
                   </Text>
-                  <Text variant="h2" weight="semibold" color="secondary" style={{ marginBottom: spacing[2] }}>
-                    {mockUser.lastName}
+                  <Text variant="h2" weight="semibold" color="secondary" style={{ marginBottom: spacing[1] }}>
+                    {user?.lname}
                   </Text>
+                  <View style={[layoutStyles.row, { alignItems: 'center', marginBottom: spacing[2] }]}>
+                    <Text variant="caption" color="secondary">
+                      @{user?.username}
+                    </Text>
+                    <View style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: user?.active ? '#34C759' : '#FF9500',
+                      marginLeft: spacing[2]
+                    }} />
+                    <Text variant="caption" color="secondary" style={{ marginLeft: spacing[1] }}>
+                      {user?.active ? 'Vérifié' : 'En attente'}
+                    </Text>
+                  </View>
                   <Text variant="body" color="secondary">
-                    {mockUser.email}
+                    {user?.email}
                   </Text>
                 </View>
               </View>
@@ -140,7 +176,7 @@ export default function ProfileScreen() {
                 marginBottom: spacing[5],
                 lineHeight: 20 
               }}>
-                {mockUser.bio}
+                {user?.bio}
               </Text>
 
               {/* Boutons d'actions principales */}
@@ -229,7 +265,7 @@ export default function ProfileScreen() {
                       marginBottom: spacing[2]
                     }}>
                       <Text variant="h2" weight="bold" color="primary" style={{ marginBottom: 0 }}>
-                        {mockUser.eventsCreated}
+                        -
                       </Text>
                     </View>
                     <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
@@ -248,7 +284,7 @@ export default function ProfileScreen() {
                       marginBottom: spacing[2]
                     }}>
                       <Text variant="h2" weight="bold" style={{ color: '#34C759', marginBottom: 0 }}>
-                        {mockUser.eventsParticipated}
+                        -
                       </Text>
                     </View>
                     <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
@@ -267,7 +303,7 @@ export default function ProfileScreen() {
                       marginBottom: spacing[2]
                     }}>
                       <Text variant="h2" weight="bold" style={{ color: '#FF9500', marginBottom: 0 }}>
-                        {mockUser.tasksCompleted}
+                        -
                       </Text>
                     </View>
                     <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
@@ -369,5 +405,6 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
     </View>
+    </ProtectedRoute>
   );
 }

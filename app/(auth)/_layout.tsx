@@ -36,6 +36,12 @@ export default function AuthLayout() {
           title: 'Mot de passe oublié',
         }}
       />
+      <Stack.Screen 
+        name="confirm-account" 
+        options={{
+          title: 'Confirmation du compte',
+        }}
+      />
     </Stack>
   );
 }
