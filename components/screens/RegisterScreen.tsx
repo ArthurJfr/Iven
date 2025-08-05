@@ -1,107 +1,362 @@
 import React, { useState } from "react";
-import { View, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, SafeAreaView  } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
 import { createThemedStyles, layoutStyles, spacing } from "../../styles";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import ErrorText from "../ui/ErrorText";
 import Text from "../ui/atoms/Text";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function RegisterScreen() {
   const { theme } = useTheme();
   const themedStyles = createThemedStyles(theme);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleRegister = () => {
-    setError("");
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      setError("Veuillez remplir tous les champs.");
-      return;
+  // États du formulaire
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const [formState, setFormState] = useState({
+    error: "",
+    loading: false,
+    showPassword: false,
+    showConfirmPassword: false,
+    acceptTerms: false,
+  });
+
+  // Validation email
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Validation mot de passe
+  const isStrongPassword = (password: string) => {
+    return password.length >= 8 && 
+           /[A-Z]/.test(password) && 
+           /[a-z]/.test(password) && 
+           /[0-9]/.test(password);
+  };
+
+  // Gestion du formulaire
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (formState.error) {
+      setFormState(prev => ({ ...prev, error: "" }));
     }
-    if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
-      return;
+  };
+
+  const validateForm = () => {
+    if (!formData.firstName.trim()) {
+      setFormState(prev => ({ ...prev, error: "Le prénom est requis." }));
+      return false;
     }
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Inscription réussie
-    }, 1200);
+
+    if (!formData.lastName.trim()) {
+      setFormState(prev => ({ ...prev, error: "Le nom est requis." }));
+      return false;
+    }
+
+    if (!formData.email.trim()) {
+      setFormState(prev => ({ ...prev, error: "L'email est requis." }));
+      return false;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setFormState(prev => ({ ...prev, error: "Veuillez entrer un email valide." }));
+      return false;
+    }
+
+    if (!formData.password) {
+      setFormState(prev => ({ ...prev, error: "Le mot de passe est requis." }));
+      return false;
+    }
+
+    if (!isStrongPassword(formData.password)) {
+      setFormState(prev => ({ 
+        ...prev, 
+        error: "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre." 
+      }));
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setFormState(prev => ({ ...prev, error: "Les mots de passe ne correspondent pas." }));
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validateForm()) return;
+
+    setFormState(prev => ({ ...prev, loading: true, error: "" }));
+
+    try {
+      // Simulation d'appel API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Inscription réussie - redirection
+      router.replace("/(tabs)");
+    } catch (error) {
+      setFormState(prev => ({ 
+        ...prev, 
+        error: "Une erreur est survenue lors de l'inscription. Veuillez réessayer." 
+      }));
+    } finally {
+      setFormState(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const togglePasswordVisibility = (field: 'password' | 'confirmPassword') => {
+    if (field === 'password') {
+      setFormState(prev => ({ ...prev, showPassword: !prev.showPassword }));
+    } else {
+      setFormState(prev => ({ ...prev, showConfirmPassword: !prev.showConfirmPassword }));
+    }
+  };
+
+  const getPasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    return strength;
+  };
+
+  const getPasswordStrengthColor = (strength: number) => {
+    if (strength < 2) return theme.error;
+    if (strength < 4) return theme.warning;
+    return theme.success;
+  };
+
+  const getPasswordStrengthText = (strength: number) => {
+    if (strength < 2) return "Faible";
+    if (strength < 4) return "Moyen";
+    return "Fort";
   };
 
   return (
+    <SafeAreaView style={{ flex: 1 }}>
     <KeyboardAvoidingView 
       style={[layoutStyles.container, themedStyles.surface]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
-        contentContainerStyle={[layoutStyles.containerCenteredPadded]}
+      <ScrollView
+        contentContainerStyle={[
+          layoutStyles.centerHorizontal,
+          { padding: spacing[5], paddingTop: spacing[0] }
+        ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={{ width: '100%', maxWidth: 400, alignItems: 'center' }}>
-          <Text variant="h1" weight="bold" style={{ marginBottom: spacing[8] }}>
+        {/* En-tête */}
+        <View style={[layoutStyles.centerHorizontal, { marginBottom: spacing[2] }]}>
+          <View style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: theme.primaryLight,
+            marginBottom: spacing[6],
+            ...layoutStyles.center
+          }}>
+            <Ionicons name="person-add" size={32} color={theme.primary} />
+          </View>
+          
+          <Text variant="h1" weight="bold" style={{ textAlign: 'center' }}>
             Inscription
           </Text>
-          
-          <View style={{ width: '100%', gap: spacing[4] }}>
-            <View style={{ flexDirection: 'row', gap: spacing[3] }}>
-              <Input
-                placeholder="Prénom"
-                value={firstName}
-                onChangeText={setFirstName}
-                style={{ flex: 1 }}
-              />
-              <Input
-                placeholder="Nom"
-                value={lastName}
-                onChangeText={setLastName}
-                style={{ flex: 1 }}
-              />
+          <Text variant="body" color="secondary" style={{ textAlign: 'center', marginTop: spacing[2] }}>
+            Créez votre compte Iven
+          </Text>
+        </View>
+
+        {/* Formulaire */}
+        <View style={{ width: '100%', maxWidth: 400 }}>
+          <View style={[layoutStyles.gap1]}>
+            {/* Nom et prénom */}
+            <View style={[layoutStyles.row, layoutStyles.gap3]}>
+              <View style={{ flex: 1 }}>
+                <Input
+                  label="Prénom"
+                  placeholder="Jean"
+                  autoCapitalize="words"
+                  value={formData.firstName}
+                  onChangeText={(value) => handleInputChange('firstName', value)}
+                  required
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Input
+                  label="Nom"
+                  placeholder="Dupont"
+                  autoCapitalize="words"
+                  value={formData.lastName}
+                  onChangeText={(value) => handleInputChange('lastName', value)}
+                  required
+                />
+              </View>
             </View>
-            
+
+            {/* Email */}
             <Input
-              placeholder="Email"
+              label="Email"
+              placeholder="votre@email.com"
               autoCapitalize="none"
               keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
+              autoComplete="email"
+              value={formData.email}
+              onChangeText={(value) => handleInputChange('email', value)}
+              required
             />
-            <Input
-              placeholder="Mot de passe"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-            <Input
-              placeholder="Confirmer le mot de passe"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-            
-            {error ? <ErrorText>{error}</ErrorText> : null}
-            
+
+            {/* Mot de passe */}
+            <View>
+              <View style={{ position: 'relative' }}>
+                <Input
+                  label="Mot de passe"
+                  placeholder="••••••••"
+                  secureTextEntry={!formState.showPassword}
+                  value={formData.password}
+                  onChangeText={(value) => handleInputChange('password', value)}
+                  required
+                />
+                <TouchableOpacity
+                  onPress={() => togglePasswordVisibility('password')}
+                  style={{
+                    position: 'absolute',
+                    right: spacing[3],
+                    top: 40,
+                  }}
+                >
+                  <Ionicons 
+                    name={formState.showPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color={theme.textSecondary} 
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Indicateur de force du mot de passe */}
+              {formData.password.length > 0 && (
+                <View style={{ marginTop: spacing[2] }}>
+                  <View style={[layoutStyles.rowBetween, { marginBottom: spacing[1] }]}>
+                    <Text variant="caption" color="secondary">
+                      Force du mot de passe
+                    </Text>
+                    <Text 
+                      variant="caption" 
+                      style={{ 
+                        color: getPasswordStrengthColor(getPasswordStrength(formData.password)) 
+                      }}
+                    >
+                      {getPasswordStrengthText(getPasswordStrength(formData.password))}
+                    </Text>
+                  </View>
+                  <View style={{
+                    height: 4,
+                    backgroundColor: theme.backgroundSecondary,
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <View style={{
+                      height: '100%',
+                      width: `${(getPasswordStrength(formData.password) / 5) * 100}%`,
+                      backgroundColor: getPasswordStrengthColor(getPasswordStrength(formData.password)),
+                      borderRadius: 2,
+                    }} />
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Confirmation mot de passe */}
+            <View style={{ position: 'relative' }}>
+              <Input
+                label="Confirmer le mot de passe"
+                placeholder="••••••••"
+                secureTextEntry={!formState.showConfirmPassword}
+                value={formData.confirmPassword}
+                onChangeText={(value) => handleInputChange('confirmPassword', value)}
+                required
+              />
+              <TouchableOpacity
+                onPress={() => togglePasswordVisibility('confirmPassword')}
+                style={{
+                  position: 'absolute',
+                  right: spacing[3],
+                  top: 40,
+                  padding: spacing[2],
+                }}
+              >
+                <Ionicons 
+                  name={formState.showConfirmPassword ? "eye-off" : "eye"} 
+                  size={20} 
+                  color={theme.textSecondary} 
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Erreur */}
+            {formState.error ? (
+              <ErrorText>{formState.error}</ErrorText>
+            ) : null}
+
+            {/* Bouton d'inscription */}
             <Button 
-              title={loading ? "Inscription..." : "S'inscrire"}
+              title={formState.loading ? "Inscription..." : "Créer mon compte"}
               onPress={handleRegister} 
-              disabled={loading}
+              disabled={formState.loading}
+              style={{ marginTop: spacing[6] }}
             />
-            
-            <Link href="/auth/login" asChild>
-              <Text variant="body" color="primary" style={{ textAlign: 'center', marginTop: spacing[4] }}>
-                Déjà un compte ? Se connecter
+
+            {/* Séparateur */}
+            <View style={[layoutStyles.rowCenter, { marginVertical: spacing[8] }]}>
+              <View style={{ 
+                flex: 1, 
+                height: 1, 
+                backgroundColor: theme.border 
+              }} />
+              <Text variant="caption" color="secondary" style={{ 
+                marginHorizontal: spacing[4] 
+              }}>
+                ou
               </Text>
-            </Link>
+              <View style={{ 
+                flex: 1, 
+                height: 1, 
+                backgroundColor: theme.border 
+              }} />
+            </View>
+
+            {/* Lien connexion */}
+            <View style={layoutStyles.centerHorizontal}>
+              <Text variant="body" color="secondary">
+                Déjà un compte ?{" "}
+              </Text>
+              <Link href="/login" asChild>
+                <TouchableOpacity style={{ marginTop: spacing[2] }}>
+                  <Text variant="body" color="primary" weight="semibold">
+                    Se connecter
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
           </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
