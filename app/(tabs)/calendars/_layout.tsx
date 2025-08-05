@@ -1,12 +1,12 @@
 import { Stack } from "expo-router";
 import { useTheme } from "../../../contexts/ThemeContext";
-import Debugger from "../../../components/Debugger";
+import { SafeAreaView } from "react-native";
 
 export default function CalendarsLayout() {
   const { theme } = useTheme();
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1 }}>
       <Stack
         screenOptions={{
           headerShown: false, // Masquer le header par défaut pour utiliser notre TopBar
@@ -14,15 +14,8 @@ export default function CalendarsLayout() {
             backgroundColor: theme.background,
           },
         }}
-      >
-        <Stack.Screen
-          name="calendar"
-          options={{
-            title: "Calendrier",
-          }}
-        />
-      </Stack>
-      <Debugger isDebugMode={false} />
-    </>
+     / >
+      
+    </SafeAreaView>
   );
 }

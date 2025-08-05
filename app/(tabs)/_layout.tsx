@@ -1,17 +1,22 @@
-import { Slot } from 'expo-router';
+import { Slot, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemeProvider, useTheme } from "../../contexts/ThemeContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import BottomBar from '../../components/ui/BottomBar';
 import Debugger from '../../components/Debugger';
+import DevNavigator from '../../components/DevNavigator';
 import { createThemedStyles, layoutStyles } from "../../styles";
 import '../../services/LoggerService';
 import React from 'react';
 
-// Ce composant utilise le contexte
-function ThemedLayout() {
+// Suppression du double ThemeProvider
+export default function TabsLayout() {
   const { theme } = useTheme();
   const themedStyles = createThemedStyles(theme);
+  const pathname = usePathname();
+  
+  // Masquer la BottomBar pour les pages d'événements individuels
+  const shouldHideBottomBar = pathname.includes('/events/') && pathname.split('/').length > 3;
   
   // Log au démarrage de l'app
   React.useEffect(() => {
@@ -31,17 +36,9 @@ function ThemedLayout() {
       >
         <Slot />
         <Debugger isDebugMode={false} />
+        <DevNavigator isVisible={true} />
       </KeyboardAvoidingView>
-      <BottomBar />
+      {!shouldHideBottomBar && <BottomBar />}
     </SafeAreaView>
-  );
-}
-
-// Le provider englobe tout
-export default function TabsLayout() {
-  return (
-    <ThemeProvider>
-      <ThemedLayout />
-    </ThemeProvider>
   );
 }
