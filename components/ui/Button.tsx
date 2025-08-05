@@ -1,88 +1,91 @@
 import React from "react";
-import { TouchableOpacity, Text, TouchableOpacityProps, StyleSheet } from "react-native";
+import { TouchableOpacity, TouchableOpacityProps } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
-import { themedStyles } from "../../styles/global";
+import { createThemedStyles, spacing } from "../../styles";
+import Text from "./atoms/Text";
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'outline';
   disabled?: boolean;
 }
 
-export default function Button({ title, variant = 'primary', disabled = false, style, ...rest }: ButtonProps) {
+export default function Button({ 
+  title, 
+  variant = 'primary', 
+  disabled = false, 
+  style, 
+  ...rest 
+}: ButtonProps) {
   const { theme } = useTheme();
-  const styles = themedStyles(theme);
+  const themedStyles = createThemedStyles(theme);
   
   const getButtonStyle = () => {
+    const baseStyle = {
+      paddingVertical: spacing[3],
+      paddingHorizontal: spacing[4],
+      borderRadius: 8,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      minHeight: 48,
+    };
+
     if (disabled) {
-      return [localStyles.button, localStyles.disabled, style];
+      return {
+        ...baseStyle,
+        backgroundColor: theme.disabled,
+      };
     }
     
-    if (variant === 'secondary') {
-      return [localStyles.button, localStyles.secondary, style];
+    switch (variant) {
+      case 'secondary':
+        return {
+          ...baseStyle,
+          backgroundColor: theme.backgroundSecondary,
+          borderWidth: 1,
+          borderColor: theme.border,
+        };
+      case 'outline':
+        return {
+          ...baseStyle,
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: theme.primary,
+        };
+      default:
+        return {
+          ...baseStyle,
+          backgroundColor: theme.primary,
+        };
     }
-    
-    return [localStyles.button, localStyles.primary, style];
   };
 
-  const getTextStyle = () => {
-    if (disabled) {
-      return localStyles.disabledText;
-    }
+  const getTextColor = () => {
+    if (disabled) return theme.disabledText;
     
-    if (variant === 'secondary') {
-      return localStyles.secondaryText;
+    switch (variant) {
+      case 'secondary':
+        return theme.text;
+      case 'outline':
+        return theme.primary;
+      default:
+        return theme.buttonText;
     }
-    
-    return localStyles.primaryText;
   };
   
   return (
     <TouchableOpacity
-      style={getButtonStyle()}
+      style={[getButtonStyle(), style]}
       disabled={disabled}
       {...rest}
     >
-      <Text style={getTextStyle()}>
+      <Text 
+        variant="body" 
+        weight="semibold"
+        style={{ color: getTextColor() }}
+      >
         {title}
       </Text>
     </TouchableOpacity>
   );
 }
-
-const localStyles = StyleSheet.create({
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  primary: {
-    backgroundColor: '#3b82f6',
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#6b7280',
-  },
-  disabled: {
-    backgroundColor: '#9ca3af',
-  },
-  primaryText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryText: {
-    color: '#6b7280',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabledText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

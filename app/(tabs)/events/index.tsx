@@ -3,38 +3,40 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import events from '../../../data/events.json';
+import Header from '../../../components/ui/organisms/Header';
+import { useTheme } from '../../../contexts/ThemeContext';
+import Card from '../../../components/ui/Card';
 
 export default function EventsListScreen() {
+  const { theme } = useTheme();
   const router = useRouter();
 
   const mockEvents = events;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFF' }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 }}>
-        <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Mes Événements</Text>
-        <TouchableOpacity onPress={() => router.push('/modals/create-event')}>
-          <Ionicons name="add-circle" size={32} color="#007AFF" />
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="Mes Événements"
+        rightAction={{
+          icon: "add-circle",
+          onPress: () => router.push('/modals/create-event')
+        }}
+      />
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
         {mockEvents.map(event => (
-          <TouchableOpacity
+          <Card
             key={event.id}
-            style={{
-              backgroundColor: '#F9F9F9',
-              padding: 16,
-              borderRadius: 12,
-              marginBottom: 12,
-            }}
+            style={{ marginBottom: 12 }}
+            variant="elevated"
+            padding="medium"
             onPress={() => router.push(`/events/${event.id}`)}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', flex: 1 }}>{event.title}</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', flex: 1, color: theme.text }}>{event.title}</Text>
               <View style={{
-                backgroundColor: '#007AFF',
+                backgroundColor: theme.primaryDark,
                 paddingHorizontal: 8,
                 paddingVertical: 4,
                 borderRadius: 12,
@@ -44,20 +46,20 @@ export default function EventsListScreen() {
             </View>
             
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <Ionicons name="calendar-outline" size={16} color="#666" />
-              <Text style={{ color: '#666', marginLeft: 8 }}>{event.date}</Text>
+              <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
+              <Text style={{ color: theme.textSecondary, marginLeft: 8 }}>{event.date}</Text>
             </View>
             
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <Ionicons name="location-outline" size={16} color="#666" />
-              <Text style={{ color: '#666', marginLeft: 8 }}>{event.location}</Text>
+              <Ionicons name="location-outline" size={16} color={theme.textSecondary} />
+              <Text style={{ color: theme.textSecondary, marginLeft: 8 }}>{event.location}</Text>
             </View>
             
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="people-outline" size={16} color="#666" />
-              <Text style={{ color: '#666', marginLeft: 8 }}>{event.participants} participants</Text>
+              <Ionicons name="people-outline" size={16} color={theme.textSecondary} />
+              <Text style={{ color: theme.textSecondary, marginLeft: 8 }}>{event.participants} participants</Text>
             </View>
-          </TouchableOpacity>
+          </Card>
         ))}
       </ScrollView>
     </View>

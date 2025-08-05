@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../contexts/ThemeContext';
+import { createThemedStyles, layoutStyles, spacing } from '../../styles';
+import Text from '../../components/ui/atoms/Text';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import Header from '../../components/ui/organisms/Header';
 
 export default function CreateEventModal() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const themedStyles = createThemedStyles(theme);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -31,123 +38,159 @@ export default function CreateEventModal() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 20, paddingTop: 60 }}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Créer un événement</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
+      <Header 
+        title="Créer un événement"
+        showBack
+        onBack={() => router.back()}
+      />
 
-      <ScrollView>
-        {/* Titre */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ marginBottom: 8 }}>Titre *</Text>
-          <Input
-            value={formData.title}
-            onChangeText={(text) => setFormData({ ...formData, title: text })}
-            placeholder="Nom de l'événement"
-          />
-        </View>
+      <ScrollView 
+        style={[layoutStyles.container]}
+        contentContainerStyle={{ paddingHorizontal: spacing[5], paddingBottom: spacing[8] }}
+      >
+        
+        {/* Informations principales */}
+        <View style={{ paddingTop: spacing[6] }}>
+          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[4] }}>
+            Informations principales
+          </Text>
 
-        {/* Description */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ marginBottom: 8 }}>Description</Text>
-          <Input
-            value={formData.description}
-            onChangeText={(text) => setFormData({ ...formData, description: text })}
-            placeholder="Description de l'événement"
-            multiline
-          />
-        </View>
+          <Card variant="elevated" padding="large" style={{ marginBottom: spacing[6] }}>
+            <View style={[layoutStyles.gap4]}>
+              <Input
+                label="Titre de l'événement"
+                placeholder="Ex: Anniversaire de Marie"
+                value={formData.title}
+                onChangeText={(value) => setFormData({...formData, title: value})}
+                required
+              />
 
-        {/* Date et Heure */}
-        <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={{ marginBottom: 8 }}>Date *</Text>
-            <Input
-              value={formData.date}
-              onChangeText={(text) => setFormData({ ...formData, date: text })}
-              placeholder="JJ/MM/AAAA"
-            />
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={{ marginBottom: 8 }}>Heure</Text>
-            <Input
-              value={formData.time}
-              onChangeText={(text) => setFormData({ ...formData, time: text })}
-              placeholder="HH:MM"
-            />
-          </View>
-        </View>
+              <Input
+                label="Description"
+                placeholder="Décrivez votre événement..."
+                value={formData.description}
+                onChangeText={(value) => setFormData({...formData, description: value})}
+                multiline
+                numberOfLines={3}
+              />
 
-        {/* Lieu */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ marginBottom: 8 }}>Lieu *</Text>
-          <Input
-            value={formData.location}
-            onChangeText={(text) => setFormData({ ...formData, location: text })}
-            placeholder="Adresse ou lieu"
-          />
-        </View>
+              <View style={[layoutStyles.row, layoutStyles.gap3]}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Date"
+                    placeholder="JJ/MM/AAAA"
+                    value={formData.date}
+                    onChangeText={(value) => setFormData({...formData, date: value})}
+                    required
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Heure"
+                    placeholder="HH:MM"
+                    value={formData.time}
+                    onChangeText={(value) => setFormData({...formData, time: value})}
+                  />
+                </View>
+              </View>
 
-        {/* Type */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ marginBottom: 8 }}>Type</Text>
-          <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity
-              style={{ flex: 1, padding: 12, marginRight: 8, backgroundColor: formData.type === 'physique' ? '#007AFF' : '#F0F0F0' }}
-              onPress={() => setFormData({ ...formData, type: 'physique' })}
+              <Input
+                label="Lieu"
+                placeholder="Adresse ou nom du lieu"
+                value={formData.location}
+                onChangeText={(value) => setFormData({...formData, location: value})}
+                required
+              />
+            </View>
+          </Card>
+
+          {/* Type d'événement */}
+          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[4] }}>
+            Type d'événement
+          </Text>
+
+          <View style={[layoutStyles.row, layoutStyles.gap3, { marginBottom: spacing[6] }]}>
+            <TouchableOpacity 
+              style={{ flex: 1 }}
+              onPress={() => setFormData({...formData, type: 'physique'})}
             >
-              <Text style={{ textAlign: 'center', color: formData.type === 'physique' ? '#FFF' : '#000' }}>Physique</Text>
+              <Card 
+                variant={formData.type === 'physique' ? 'elevated' : 'outlined'} 
+                padding="medium"
+                style={{ 
+                  backgroundColor: formData.type === 'physique' ? theme.primary : theme.backgroundSecondary 
+                }}
+              >
+                <View style={[layoutStyles.centerHorizontal]}>
+                  <Ionicons 
+                    name="location" 
+                    size={24} 
+                    color={formData.type === 'physique' ? '#FFF' : theme.textSecondary} 
+                    style={{ marginBottom: spacing[2] }}
+                  />
+                  <Text 
+                    variant="body" 
+                    weight="semibold"
+                    style={{ 
+                      color: formData.type === 'physique' ? '#FFF' : theme.text,
+                      textAlign: 'center'
+                    }}
+                  >
+                    Physique
+                  </Text>
+                </View>
+              </Card>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={{ flex: 1, padding: 12, marginLeft: 8, backgroundColor: formData.type === 'virtuel' ? '#007AFF' : '#F0F0F0' }}
-              onPress={() => setFormData({ ...formData, type: 'virtuel' })}
+
+            <TouchableOpacity 
+              style={{ flex: 1 }}
+              onPress={() => setFormData({...formData, type: 'virtuel'})}
             >
-              <Text style={{ textAlign: 'center', color: formData.type === 'virtuel' ? '#FFF' : '#000' }}>Virtuel</Text>
+              <Card 
+                variant={formData.type === 'virtuel' ? 'elevated' : 'outlined'} 
+                padding="medium"
+                style={{ 
+                  backgroundColor: formData.type === 'virtuel' ? theme.primary : theme.backgroundSecondary 
+                }}
+              >
+                <View style={[layoutStyles.centerHorizontal]}>
+                  <Ionicons 
+                    name="videocam" 
+                    size={24} 
+                    color={formData.type === 'virtuel' ? '#FFF' : theme.textSecondary} 
+                    style={{ marginBottom: spacing[2] }}
+                  />
+                  <Text 
+                    variant="body" 
+                    weight="semibold"
+                    style={{ 
+                      color: formData.type === 'virtuel' ? '#FFF' : theme.text,
+                      textAlign: 'center'
+                    }}
+                  >
+                    Virtuel
+                  </Text>
+                </View>
+              </Card>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Catégorie */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ marginBottom: 8 }}>Catégorie</Text>
-          <Input
-            value={formData.category}
-            onChangeText={(text) => setFormData({ ...formData, category: text })}
-            placeholder="Ex: Fête, Réunion, Voyage..."
-          />
-        </View>
-
-        {/* Participants max */}
-        <View style={{ marginBottom: 32 }}>
-          <Text style={{ marginBottom: 8 }}>Participants max</Text>
-          <Input
-            value={formData.maxParticipants}
-            onChangeText={(text) => setFormData({ ...formData, maxParticipants: text })}
-            placeholder="Nombre maximum"
-            keyboardType="numeric"
-          />
-        </View>
-
-        {/* Boutons */}
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Button
-            title="Annuler"
-            onPress={() => router.back()}
-            variant="secondary"
-            style={{ flex: 1 }}
-          />
-          <Button
-            title="Créer"
-            onPress={handleSubmit}
-            style={{ flex: 1 }}
-          />
         </View>
       </ScrollView>
-    </View>
+
+      {/* Footer fixe */}
+      <View style={{
+        paddingHorizontal: spacing[5],
+        paddingVertical: spacing[4],
+        borderTopWidth: 1,
+        borderTopColor: theme.border,
+        backgroundColor: theme.background
+      }}>
+        <Button 
+          title="Créer l'événement"
+          onPress={handleSubmit}
+        />
+      </View>
+    </SafeAreaView>
   );
 } 

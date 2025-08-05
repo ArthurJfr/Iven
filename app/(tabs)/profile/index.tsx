@@ -1,110 +1,371 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { createThemedStyles, layoutStyles, spacing } from '../../../styles';
+import Text from '../../../components/ui/atoms/Text';
+import Card from '../../../components/ui/Card';
+import Avatar from '../../../components/ui/atoms/Avatar';
+import ToggleTheme from '../../../components/ui/ToggleTheme';
+import Header from '../../../components/ui/organisms/Header';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const themedStyles = createThemedStyles(theme);
 
   const mockUser = {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
+    firstName: 'Arthur',
+    lastName: 'Jaffre',
+    email: 'arthur.jaffre@example.com',
     phone: '+33 6 12 34 56 78',
     bio: 'Passionné d\'événements et de rencontres',
     eventsCreated: 12,
     eventsParticipated: 28,
     tasksCompleted: 45,
+    avatar: null,
   };
 
-  const menuItems = [
-    { icon: 'person-outline', title: 'Modifier le profil', action: () => router.push('/modals/edit-profile') },
-    { icon: 'settings-outline', title: 'Paramètres', action: () => router.push('/profile/settings') },
-    { icon: 'notifications-outline', title: 'Notifications', action: () => router.push('/notifications') },
-    { icon: 'help-circle-outline', title: 'Aide & Support', action: () => {} },
-    { icon: 'information-circle-outline', title: 'À propos', action: () => {} },
-    { icon: 'log-out-outline', title: 'Déconnexion', action: () => {}, color: '#FF3B30' },
+  const settingSections = [
+    {
+      title: "Préférences",
+      items: [
+        { 
+          icon: 'color-palette-outline', 
+          title: 'Thème', 
+          subtitle: 'Clair ou sombre',
+          component: <ToggleTheme />
+        },
+        { 
+          icon: 'notifications-outline', 
+          title: 'Notifications push', 
+          subtitle: 'Recevoir des alertes',
+          action: () => {},
+          component: null
+        },
+        { 
+          icon: 'mail-outline', 
+          title: 'Notifications email', 
+          subtitle: 'Recevoir des emails',
+          action: () => {},
+          component: null
+        },
+      ]
+    },
+    {
+      title: "Confidentialité & Sécurité",
+      items: [
+        { 
+          icon: 'lock-closed-outline', 
+          title: 'Profil privé', 
+          subtitle: 'Contrôler la visibilité',
+          action: () => {},
+          component: null
+        },
+        { 
+          icon: 'eye-off-outline', 
+          title: 'Statut en ligne', 
+          subtitle: 'Afficher votre présence',
+          action: () => {},
+          component: null
+        },
+      ]
+    },
+    {
+      title: "Support & Informations",
+      items: [
+        { 
+          icon: 'help-circle-outline', 
+          title: 'Centre d\'aide', 
+          subtitle: 'FAQ et assistance',
+          action: () => {},
+          component: null
+        },
+        { 
+          icon: 'information-circle-outline', 
+          title: 'À propos d\'Iven', 
+          subtitle: 'Version 1.0.0',
+          action: () => {},
+          component: null
+        },
+      ]
+    }
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFF' }}>
-      <ScrollView>
-        {/* Header avec profil */}
-        <View style={{ alignItems: 'center', padding: 20, paddingTop: 60 }}>
-          <View style={{
-            width: 100,
-            height: 100,
-            borderRadius: 50,
-            backgroundColor: '#F0F0F0',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: 16,
-          }}>
-            <Ionicons name="person" size={50} color="#999" />
-          </View>
-          
-          <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 4 }}>
-            {mockUser.name}
-          </Text>
-          <Text style={{ color: '#666', marginBottom: 8 }}>
-            {mockUser.email}
-          </Text>
-          <Text style={{ color: '#666', textAlign: 'center', paddingHorizontal: 20 }}>
-            {mockUser.bio}
-          </Text>
-        </View>
+    <View style={[layoutStyles.container, themedStyles.surface]}>
+      <Header 
+        title="Mon profil"
+      />
+      
+      <ScrollView 
+        style={layoutStyles.container}
+        contentContainerStyle={{ paddingBottom: spacing[8] }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Profile Section */}
+        <View style={{ 
+          paddingHorizontal: spacing[5], 
+          paddingTop: spacing[2],
+          paddingBottom: spacing[6] 
+        }}>
+          <Card variant="elevated" padding="large">
+            {/* Avatar et infos principales - Layout horizontal */}
+            <View>
+              {/* Header avec avatar à gauche et noms à droite */}
+              <View style={[layoutStyles.row, { alignItems: 'center', marginBottom: spacing[5] }]}>
+                <Avatar
+                  size="xlarge"
+                  source={mockUser.avatar ? { uri: mockUser.avatar } : undefined}
+                  fallbackIcon="person"
+                  style={{ marginRight: spacing[5] }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text variant="h1" weight="bold" style={{ marginBottom: spacing[1] }}>
+                    {mockUser.firstName}
+                  </Text>
+                  <Text variant="h2" weight="semibold" color="secondary" style={{ marginBottom: spacing[2] }}>
+                    {mockUser.lastName}
+                  </Text>
+                  <Text variant="body" color="secondary">
+                    {mockUser.email}
+                  </Text>
+                </View>
+              </View>
 
-        {/* Statistiques */}
-        <View style={{ flexDirection: 'row', paddingHorizontal: 20, marginBottom: 20 }}>
-          <View style={{ flex: 1, alignItems: 'center', padding: 16, backgroundColor: '#F9F9F9', borderRadius: 12, marginRight: 8 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#007AFF' }}>
-              {mockUser.eventsCreated}
-            </Text>
-            <Text style={{ color: '#666', fontSize: 12 }}>Événements créés</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center', padding: 16, backgroundColor: '#F9F9F9', borderRadius: 12, marginHorizontal: 4 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#34C759' }}>
-              {mockUser.eventsParticipated}
-            </Text>
-            <Text style={{ color: '#666', fontSize: 12 }}>Participations</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center', padding: 16, backgroundColor: '#F9F9F9', borderRadius: 12, marginLeft: 8 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FF9500' }}>
-              {mockUser.tasksCompleted}
-            </Text>
-            <Text style={{ color: '#666', fontSize: 12 }}>Tâches terminées</Text>
-          </View>
-        </View>
-
-        {/* Menu */}
-        <View style={{ paddingHorizontal: 20 }}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                padding: 16,
-                borderBottomWidth: index < menuItems.length - 1 ? 1 : 0,
-                borderBottomColor: '#F0F0F0',
-              }}
-              onPress={item.action}
-            >
-              <Ionicons
-                name={item.icon as "person-outline" | "settings-outline" | "notifications-outline" | "help-circle-outline" | "information-circle-outline" | "log-out-outline"}
-                size={24}
-                color={item.color || '#666'}
-                style={{ marginRight: 16 }}
-              />
-              <Text style={{
-                flex: 1,
-                fontSize: 16,
-                color: item.color || '#000',
+              {/* Bio centrée */}
+              <Text variant="body" color="secondary" style={{ 
+                textAlign: 'center', 
+                marginBottom: spacing[5],
+                lineHeight: 20 
               }}>
-                {item.title}
+                {mockUser.bio}
               </Text>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
+
+              {/* Boutons d'actions principales */}
+              <View style={[layoutStyles.row, { marginBottom: spacing[6] }]}>
+                <TouchableOpacity
+                  onPress={() => router.push('/modals/edit-profile')}
+                  style={[
+                    {
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: spacing[3],
+                      paddingHorizontal: spacing[4],
+                      backgroundColor: theme.primary,
+                      borderRadius: 25,
+                      marginRight: spacing[2]
+                    }
+                  ]}
+                >
+                  <Ionicons 
+                    name="person-outline" 
+                    size={18} 
+                    color="white"
+                    style={{ marginRight: spacing[2] }}
+                  />
+                  <Text variant="body" weight="semibold" style={{ color: 'white' }}>
+                    Modifier
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/notifications')}
+                  style={[
+                    {
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: spacing[3],
+                      paddingHorizontal: spacing[4],
+                      backgroundColor: theme.backgroundSecondary,
+                      borderRadius: 25,
+                      marginLeft: spacing[2]
+                    }
+                  ]}
+                >
+                  <Ionicons 
+                    name="notifications-outline" 
+                    size={18} 
+                    color={theme.text}
+                    style={{ marginRight: spacing[2] }}
+                  />
+                  <Text variant="body" weight="semibold">
+                    Notifications
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Divider */}
+              <View style={{ 
+                width: '100%', 
+                height: 1, 
+                backgroundColor: theme.border,
+                marginBottom: spacing[5] 
+              }} />
+
+              {/* Statistiques en grid - reste identique */}
+              <View style={{ width: '100%' }}>
+                <Text variant="h3" weight="semibold" style={{ 
+                  marginBottom: spacing[4],
+                  textAlign: 'center' 
+                }}>
+                  Statistiques
+                </Text>
+                
+                <View style={[layoutStyles.row, { justifyContent: 'space-between' }]}>
+                  <View style={[layoutStyles.centerHorizontal, { flex: 1 }]}>
+                    <View style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: theme.primary + '15',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: spacing[2]
+                    }}>
+                      <Text variant="h2" weight="bold" color="primary" style={{ marginBottom: 0 }}>
+                        {mockUser.eventsCreated}
+                      </Text>
+                    </View>
+                    <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+                      Événements{'\n'}créés
+                    </Text>
+                  </View>
+
+                  <View style={[layoutStyles.centerHorizontal, { flex: 1 }]}>
+                    <View style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: '#34C759' + '15',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: spacing[2]
+                    }}>
+                      <Text variant="h2" weight="bold" style={{ color: '#34C759', marginBottom: 0 }}>
+                        {mockUser.eventsParticipated}
+                      </Text>
+                    </View>
+                    <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+                      Participations
+                    </Text>
+                  </View>
+
+                  <View style={[layoutStyles.centerHorizontal, { flex: 1 }]}>
+                    <View style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: '#FF9500' + '15',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: spacing[2]
+                    }}>
+                      <Text variant="h2" weight="bold" style={{ color: '#FF9500', marginBottom: 0 }}>
+                        {mockUser.tasksCompleted}
+                      </Text>
+                    </View>
+                    <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+                      Tâches{'\n'}terminées
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </Card>
+        </View>
+
+        {/* Sections Paramètres avec espacement amélioré */}
+        <View style={{ paddingHorizontal: spacing[5] }}>
+          {settingSections.map((section, sectionIndex) => (
+            <View key={sectionIndex} style={{ marginBottom: spacing[5] }}>
+              <Text variant="h3" weight="semibold" style={{ 
+                marginBottom: spacing[3],
+                marginLeft: spacing[1] 
+              }}>
+                {section.title}
+              </Text>
+              
+              <Card variant="elevated" padding="medium">
+                {section.items.map((item, itemIndex) => (
+                  <TouchableOpacity
+                    key={itemIndex}
+                    onPress={item.action}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: spacing[4],
+                      paddingHorizontal: spacing[4],
+                      borderBottomWidth: itemIndex < section.items.length - 1 ? 1 : 0,
+                      borderBottomColor: theme.border,
+                    }}
+                  >
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: theme.backgroundSecondary,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: spacing[4]
+                    }}>
+                      <Ionicons 
+                        name={item.icon as any} 
+                        size={20} 
+                        color={theme.primary}
+                      />
+                    </View>
+                    
+                    <View style={{ flex: 1 }}>
+                      <Text variant="body" weight="semibold" style={{ marginBottom: 2 }}>
+                        {item.title}
+                      </Text>
+                      <Text variant="caption" color="secondary">
+                        {item.subtitle}
+                      </Text>
+                    </View>
+                    
+                    {item.component || (
+                      <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </Card>
+            </View>
           ))}
+        </View>
+
+        {/* Section Déconnexion - style amélioré */}
+        <View style={{ paddingHorizontal: spacing[5] }}>
+          <TouchableOpacity
+            onPress={() => {}}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: spacing[4],
+              paddingHorizontal: spacing[5],
+              backgroundColor: '#FF3B30' + '10',
+              borderRadius: 16,
+              borderWidth: 1.5,
+              borderColor: '#FF3B30' + '30',
+            }}
+          >
+            <Ionicons 
+              name="log-out-outline" 
+              size={22} 
+              color="#FF3B30"
+              style={{ marginRight: spacing[3] }}
+            />
+            <Text variant="body" weight="bold" style={{ color: '#FF3B30' }}>
+              Se déconnecter
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

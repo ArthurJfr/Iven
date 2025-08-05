@@ -73,11 +73,10 @@ export default function Header({
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 10,
+    paddingVertical: 0,
+    marginBottom: 20,
+
   },
   content: {
     flexDirection: 'row',

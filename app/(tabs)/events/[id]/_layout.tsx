@@ -1,70 +1,56 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Stack } from 'expo-router';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 export default function EventLayout() {
+  const { theme } = useTheme();
+
   return (
-    <Tabs
+    <Stack
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#666',
+        contentStyle: {
+          backgroundColor: theme.background,
+        },
+        animation: 'slide_from_right',
       }}
     >
-      <Tabs.Screen
+      <Stack.Screen
         name="index"
         options={{
-          title: 'Résumé',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="information-circle-outline" size={size} color={color} />
-          ),
+          title: 'Événement',
         }}
       />
-      <Tabs.Screen
+      <Stack.Screen
         name="tasks"
         options={{
           title: 'Tâches',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkmark-circle-outline" size={size} color={color} />
-          ),
         }}
       />
-      <Tabs.Screen
+      <Stack.Screen
         name="budget"
         options={{
           title: 'Budget',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="card-outline" size={size} color={color} />
-          ),
         }}
       />
-      <Tabs.Screen
+      <Stack.Screen
         name="media"
         options={{
           title: 'Médias',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="image-outline" size={size} color={color} />
-          ),
         }}
       />
-      <Tabs.Screen
+      <Stack.Screen
         name="chat"
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-outline" size={size} color={color} />
-          ),
         }}
       />
-      <Tabs.Screen
+      <Stack.Screen
         name="manage"
         options={{
           title: 'Gérer',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
         }}
       />
-    </Tabs>
+    </Stack>
   );
 } 

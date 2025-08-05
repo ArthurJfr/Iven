@@ -1,81 +1,36 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import Text from './Text';
+import { spacing } from '../../../styles';
 
 interface BadgeProps {
-  children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
-  size?: 'small' | 'medium';
+  text: string;
+  color: string;
+  variant?: 'default' | 'small';
+  style?: ViewStyle;
 }
 
-export default function Badge({ 
-  children, 
-  variant = 'primary', 
-  size = 'medium' 
-}: BadgeProps) {
-  const getVariantStyle = () => {
-    switch (variant) {
-      case 'primary': return styles.primary;
-      case 'secondary': return styles.secondary;
-      case 'success': return styles.success;
-      case 'warning': return styles.warning;
-      case 'error': return styles.error;
-      default: return styles.primary;
-    }
-  };
-
-  const getSizeStyle = () => {
-    return size === 'small' ? styles.small : styles.medium;
-  };
-
-  const getTextColor = () => {
-    return variant === 'secondary' ? '#666' : '#FFF';
+export default function Badge({ text, color, variant = 'default', style }: BadgeProps) {
+  const badgeStyle: ViewStyle = {
+    backgroundColor: color + '20',
+    borderColor: color,
+    borderWidth: 1,
+    borderRadius: variant === 'small' ? 10 : 12,
+    paddingHorizontal: variant === 'small' ? spacing[2] : spacing[3],
+    paddingVertical: variant === 'small' ? spacing[1] : spacing[1],
+    alignSelf: 'flex-start',
   };
 
   return (
-    <View style={[styles.container, getVariantStyle(), getSizeStyle()]}>
+    <View style={[badgeStyle, style]}>
       <Text 
-        variant={size === 'small' ? 'small' : 'caption'} 
-        style={{ color: getTextColor() }}
-        weight="medium"
+        variant={variant === 'small' ? 'small' : 'caption'} 
+        weight="semibold"
+        style={{ color }}
       >
-        {children}
+        {text}
       </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-  },
-  small: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  medium: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  primary: {
-    backgroundColor: '#007AFF',
-  },
-  secondary: {
-    backgroundColor: '#F0F0F0',
-  },
-  success: {
-    backgroundColor: '#34C759',
-  },
-  warning: {
-    backgroundColor: '#FF9500',
-  },
-  error: {
-    backgroundColor: '#FF3B30',
-  },
-});
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
 
+
 // Import des composants
 import Text from '../../components/ui/atoms/Text';
 import Avatar from '../../components/ui/atoms/Avatar';
