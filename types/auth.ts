@@ -8,9 +8,9 @@ export interface User {
   lname: string;
   avatar?: string;
   active: boolean;
-  bio: string;
-  createdAt: string;
-  updatedAt: string;
+  bio?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AuthResponse {

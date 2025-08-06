@@ -29,6 +29,7 @@ export const API_CONFIG = {
   // Endpoints spécifiques
   endpoints: {
     health: '/health',
+    health_protected: '/health/protected',
     auth: {
       login: '/auth/login',
       register: '/auth/register',

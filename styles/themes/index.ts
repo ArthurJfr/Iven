@@ -6,6 +6,11 @@ export const lightTheme = {
   background: colors.white,
   backgroundSecondary: colors.gray[50],
   backgroundTertiary: colors.gray[100],
+
+  // Couleurs de fond des cards
+  cardBackground: colors.gray[50],
+  cardBackgroundSecondary: colors.gray[100],
+  cardBackgroundTertiary: colors.gray[200],
   
   // Couleurs de texte
   text: colors.gray[900],
@@ -44,6 +49,11 @@ export const darkTheme = {
   background: colors.gray[900],
   backgroundSecondary: colors.gray[800],
   backgroundTertiary: colors.gray[700],
+  
+  // Couleurs de fond des cards
+  cardBackground: colors.gray[900],
+  cardBackgroundSecondary: colors.gray[800],
+  cardBackgroundTertiary: colors.gray[700],
   
   // Couleurs de texte
   text: colors.white,

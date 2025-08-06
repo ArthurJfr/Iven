@@ -82,9 +82,7 @@ class ApiService {
    * Requête health check pour vérifier l'état de l'API
    */
   public async healthCheck(): Promise<ApiResponse<HealthCheckResponse>> {
-    try {
-      console.info('🏥 Checking API health...', API_CONFIG.baseURL, API_CONFIG.endpoints.health);
-      
+    try {      
       const response = await this.instance.get<HealthCheckResponse>(API_CONFIG.endpoints.health);
       
       return {
@@ -99,6 +97,50 @@ class ApiService {
         success: false,
         error: error.response?.data?.message || error.message || 'Health check failed',
         message: 'API health check failed'
+      };
+    }
+  }
+  /**
+   * Requête health check protégée (nécessite authentification)
+   * Le token Bearer est automatiquement envoyé via les intercepteurs
+   */
+  public async healthCheckProtected(): Promise<ApiResponse<HealthCheckResponse>> {
+    try {
+      // Vérifier si un token est présent
+      const authHeader = this.instance.defaults.headers.common['Authorization'];
+      if (!authHeader) {
+        console.warn('⚠️ No auth token found for protected health check');
+        return {
+          success: false,
+          error: 'Authentication token required',
+          message: 'Protected health check requires authentication'
+        };
+      }
+
+      console.info('🔐 Making protected health check with auth token');
+      const response = await this.instance.get<HealthCheckResponse>(API_CONFIG.endpoints.health_protected);
+      
+      return {
+        success: true,
+        data: response.data,
+        message: 'Protected API health check successful'
+      };
+    } catch (error: any) {
+      console.error('💥 Protected health check failed:', error.message);
+      
+      // Gestion spécifique des erreurs d'authentification
+      if (error.response?.status === 401) {
+        return {
+          success: false,
+          error: 'Unauthorized - Invalid or expired token',
+          message: 'Authentication required for protected health check'
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Protected health check failed',
+        message: 'Protected API health check failed'
       };
     }
   }

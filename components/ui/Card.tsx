@@ -31,7 +31,7 @@ export default function Card({
 
   const getCardStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      backgroundColor: theme.background,
+      backgroundColor: theme.backgroundSecondary,
       borderRadius: 12,
       margin,
     };
@@ -56,7 +56,7 @@ export default function Card({
       case 'flat':
         return {
           ...baseStyle,
-          backgroundColor: theme.background,
+          backgroundColor: theme.cardBackground,
         };
       default:
         return {
@@ -108,7 +108,7 @@ export default function Card({
             </Text>
           )}
           {subtitle && (
-            <Text style={[localStyles.subtitle, { color: theme.secondary }]}>
+            <Text style={[localStyles.subtitle, { color: theme.textSecondary }]}>
               {subtitle}
             </Text>
           )}

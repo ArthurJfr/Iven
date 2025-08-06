@@ -22,30 +22,66 @@ class AuthService {
    */
   async initialize(): Promise<boolean> {
     try {
+      // Tentative de réparation des données corrompues
+      await this.repairStoredAuth();
+      
       const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
       const userData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
       const expiresAt = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_EXPIRES);
       
-      if (token && userData && expiresAt) {
+      // Validation des données récupérées
+      if (!token || !userData) {
+        console.info('ℹ️ Données d\'authentification incomplètes, nettoyage effectué');
+        await this.clearStoredAuth();
+        return false;
+      }
+
+      // Validation du format des données utilisateur
+      let parsedUserData;
+      try {
+        parsedUserData = JSON.parse(userData);
+      } catch (parseError) {
+        console.error('❌ Erreur parsing données utilisateur:', parseError);
+        await this.clearStoredAuth();
+        return false;
+      }
+
+      // Validation de la structure des données utilisateur
+      if (!parsedUserData.id || !parsedUserData.email) {
+        console.warn('⚠️ Données utilisateur invalides, nettoyage effectué');
+        await this.clearStoredAuth();
+        return false;
+      }
+
+      // Validation de la date d'expiration (si présente)
+      if (expiresAt && expiresAt.trim() !== '') {
         const expiry = new Date(expiresAt);
         const now = new Date();
         
-        if (now < expiry) {
-          // Session valide - restaurer les données
-          this.authToken = token;
-          this.currentUser = JSON.parse(userData);
-          apiService.setAuthToken(token);
-          
-          console.info('✅ Session restaurée depuis le stockage');
-          return true;
-        } else {
+        if (isNaN(expiry.getTime())) {
+          console.warn('⚠️ Date d\'expiration invalide, nettoyage effectué');
+          await this.clearStoredAuth();
+          return false;
+        }
+        
+        if (now >= expiry) {
           // Session expirée - nettoyer
           await this.clearStoredAuth();
           console.info('⚠️ Session expirée, nettoyage effectué');
+          return false;
         }
+      } else {
+        console.info('ℹ️ Pas de date d\'expiration définie, session considérée comme valide');
       }
       
-      return false;
+      // Session valide - restaurer les données
+      this.authToken = token;
+      this.currentUser = parsedUserData;
+      apiService.setAuthToken(token);
+      
+      console.info('✅ Session restaurée depuis le stockage');
+      return true;
+      
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation de l\'auth:', error);
       await this.clearStoredAuth();
@@ -54,18 +90,112 @@ class AuthService {
   }
 
   /**
+   * Valider les données d'authentification avant sauvegarde
+   */
+  private validateAuthData(authData: AuthResponse): boolean {
+    // Vérification du token
+    if (!authData.token || typeof authData.token !== 'string' || authData.token.trim() === '') {
+      console.warn('⚠️ Token invalide ou manquant');
+      return false;
+    }
+
+    // Vérification des données utilisateur
+    if (!authData.user || typeof authData.user !== 'object') {
+      console.warn('⚠️ Données utilisateur manquantes ou invalides');
+      return false;
+    }
+
+    // Vérification des champs obligatoires de l'utilisateur
+    const requiredFields = ['id', 'email', 'username', 'fname', 'lname'];
+    for (const field of requiredFields) {
+      if (!authData.user[field as keyof User]) {
+        console.warn(`⚠️ Champ utilisateur manquant ou invalide: ${field}`);
+        return false;
+      }
+    }
+
+    // Vérification de la date d'expiration (optionnelle)
+    if (authData.expiresAt && typeof authData.expiresAt !== 'string') {
+      console.warn('⚠️ Format de date d\'expiration invalide');
+      return false;
+    }
+
+    if (authData.expiresAt) {
+      const expiry = new Date(authData.expiresAt);
+      if (isNaN(expiry.getTime())) {
+        console.warn('⚠️ Format de date d\'expiration invalide');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Persister les données d'authentification
    */
   private async persistAuthData(authData: AuthResponse): Promise<void> {
     try {
+      // Validation des données avant sauvegarde
+      if (!this.validateAuthData(authData)) {
+        console.error('❌ Données d\'authentification invalides, sauvegarde annulée');
+        return;
+      }
+
+      // Nettoyage et préparation des données
+      const token = authData.token.trim();
+      const userData = JSON.stringify(authData.user);
+      const expiresAt = authData.expiresAt || '';
+
+      // Vérifier que expiresAt n'est pas undefined avant de sauvegarder
+      if (expiresAt === undefined) {
+        console.warn('⚠️ expiresAt est undefined, utilisation d\'une chaîne vide');
+      }
+
       await AsyncStorage.multiSet([
-        [this.STORAGE_KEYS.AUTH_TOKEN, authData.token],
-        [this.STORAGE_KEYS.USER_DATA, JSON.stringify(authData.user)],
-        [this.STORAGE_KEYS.AUTH_EXPIRES, authData.expiresAt]
+        [this.STORAGE_KEYS.AUTH_TOKEN, token],
+        [this.STORAGE_KEYS.USER_DATA, userData],
+        [this.STORAGE_KEYS.AUTH_EXPIRES, expiresAt]
       ]);
       console.info('💾 Données d\'authentification sauvegardées');
     } catch (error) {
       console.error('❌ Erreur sauvegarde auth:', error);
+      // En cas d'erreur, nettoyer le stockage pour éviter la corruption
+      await this.clearStoredAuth();
+    }
+  }
+
+  /**
+   * Nettoyer et réparer les données AsyncStorage corrompues
+   */
+  async repairStoredAuth(): Promise<void> {
+    try {
+      console.info('🔧 Tentative de réparation des données AsyncStorage...');
+      
+      // Récupérer toutes les clés d'authentification
+      const keys = await AsyncStorage.getAllKeys();
+      const authKeys = keys.filter(key => key.startsWith('@iven_'));
+      
+      if (authKeys.length === 0) {
+        console.info('ℹ️ Aucune donnée d\'authentification trouvée');
+        return;
+      }
+
+      // Vérifier chaque clé et nettoyer si nécessaire
+      for (const key of authKeys) {
+        const value = await AsyncStorage.getItem(key);
+        
+        if (value === null || value === undefined || value === '') {
+          console.warn(`⚠️ Clé corrompue détectée: ${key}, suppression...`);
+          await AsyncStorage.removeItem(key);
+        }
+      }
+
+      console.info('✅ Réparation des données AsyncStorage terminée');
+    } catch (error) {
+      console.error('❌ Erreur lors de la réparation:', error);
+      // En cas d'erreur, nettoyer complètement
+      await this.clearStoredAuth();
     }
   }
 
