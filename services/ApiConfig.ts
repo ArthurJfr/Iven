@@ -5,8 +5,9 @@
 
 export const API_CONFIG = {
   // URL de base de votre API
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.177:3000/api',
+  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.12.88:3000/api',
   // ip pc fix 192.168.1.177
+  //ip mac Realtimes 192.168.12.88
 
   // Timeout pour les requêtes (en millisecondes)
   timeout: 10000,
