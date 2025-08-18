@@ -69,7 +69,7 @@ export default function TabsLayout() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Slot />
-        <Debugger isDebugMode={false} />
+        <Debugger isDebugMode={true} />
         <DevNavigator isVisible={true} />
       </KeyboardAvoidingView>
       {!shouldHideBottomBar && <BottomBar />}

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { 
   View, 
   ScrollView, 
-  TouchableOpacity, 
   Alert, 
   SafeAreaView, 
   Animated, 
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { createThemedStyles, layoutStyles, spacing } from '../../styles';
 import Text from '../../components/ui/atoms/Text';
@@ -20,6 +20,7 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import DatePicker from '../../components/ui/DatePicker';
 import TimePicker from '../../components/ui/TimePicker';
+import { eventService } from '../../services/EventService';
 
 const { width } = Dimensions.get('window');
 
@@ -31,12 +32,11 @@ export default function CreateEventModal() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    date: '',
-    time: '',
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
     location: '',
-    type: 'physique',
-    category: '',
-    maxParticipants: '',
   });
 
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -57,263 +57,163 @@ export default function CreateEventModal() {
     ]).start();
   }, []);
 
-  const handleSubmit = () => {
-    if (!formData.title || !formData.date || !formData.location) {
-      Alert.alert('Erreur', 'Veuillez remplir les champs obligatoires');
-      return;
-    }
-    
-    Alert.alert('Succès', 'Événement créé avec succès !', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+  // Fonction utilitaire pour mettre à jour les champs de manière sécurisée
+  const updateFormField = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value || '' // Assurer qu'on n'a jamais undefined
+    }));
   };
 
-  const categories = [
-    { 
-      id: 'anniversaire', 
-      name: 'Anniversaire', 
-      icon: 'gift',
-      color: '#FF6B6B', // Rouge corail
-      lightColor: '#FFE8E8'
-    },
-    { 
-      id: 'reunion', 
-      name: 'Réunion', 
-      icon: 'people',
-      color: '#4ECDC4', // Turquoise
-      lightColor: '#E8F8F7'
-    },
-    { 
-      id: 'voyage', 
-      name: 'Voyage', 
-      icon: 'airplane',
-      color: '#45B7D1', // Bleu ciel
-      lightColor: '#E8F4F8'
-    },
-    { 
-      id: 'soiree', 
-      name: 'Soirée', 
-      icon: 'wine',
-      color: '#96CEB4', // Vert menthe
-      lightColor: '#E8F5F0'
-    },
-    { 
-      id: 'sport', 
-      name: 'Sport', 
-      icon: 'football',
-      color: '#FFA726', // Orange
-      lightColor: '#FFF3E0'
-    },
-    { 
-      id: 'culture', 
-      name: 'Culture', 
-      icon: 'library',
-      color: '#AB47BC', // Violet
-      lightColor: '#F3E5F5'
-    },
-  ];
+  const handleSubmit = async () => {
+    // Validation des champs obligatoires
+    if (!formData.title || !formData.startDate || !formData.endDate || !formData.location) {
+      Alert.alert('Erreur', 'Veuillez remplir les champs obligatoires (titre, dates de début/fin et lieu)');
+      return;
+    }
 
-  const renderTypeSelector = () => (
-    <View style={{ marginBottom: spacing[6] }}>
-      <Text variant="h3" weight="semibold" style={{ 
-        marginBottom: spacing[4],
-        color: theme.text,
-        textAlign: 'center'
-      }}>
-        Type d'événement
-      </Text>
+    try {
+      // Récupérer l'owner_id depuis le stockage local
+      const userData = await AsyncStorage.getItem('@iven_user_data');
+      if (!userData) {
+        Alert.alert('Erreur', 'Impossible de récupérer les informations utilisateur. Veuillez vous reconnecter.');
+        return;
+      }
 
-      <View style={[layoutStyles.row, layoutStyles.gap3]}>
-        <TouchableOpacity 
-          style={{ flex: 1 }}
-          onPress={() => setFormData({...formData, type: 'physique'})}
-        >
-          <Animated.View style={{
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }}>
-            <Card 
-              variant={formData.type === 'physique' ? 'elevated' : 'outlined'} 
-              padding="medium"
-              style={{ 
-                backgroundColor: formData.type === 'physique' ? theme.primary : theme.backgroundSecondary,
-                alignItems: 'center',
-                borderColor: formData.type === 'physique' ? theme.primary : theme.border,
-              }}
-            >
-              <View style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: formData.type === 'physique' ? 'rgba(255,255,255,0.2)' : theme.background,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: spacing[2],
-              }}>
-                <Ionicons 
-                  name="location" 
-                  size={24} 
-                  color={formData.type === 'physique' ? theme.buttonText : theme.textSecondary} 
-                />
-              </View>
-              <Text 
-                variant="body" 
-                weight="semibold"
-                style={{ 
-                  color: formData.type === 'physique' ? theme.buttonText : theme.text,
-                  textAlign: 'center'
-                }}
-              >
-                Physique
-              </Text>
-              <Text 
-                variant="caption" 
-                style={{ 
-                  color: formData.type === 'physique' ? 'rgba(255,255,255,0.8)' : theme.textSecondary,
-                  textAlign: 'center',
-                  marginTop: spacing[1]
-                }}
-              >
-                En présentiel
-              </Text>
-            </Card>
-          </Animated.View>
-        </TouchableOpacity>
+      const user = JSON.parse(userData);
+      const owner_id = user.id;
 
-        <TouchableOpacity 
-          style={{ flex: 1 }}
-          onPress={() => setFormData({...formData, type: 'virtuel'})}
-        >
-          <Animated.View style={{
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }}>
-            <Card 
-              variant={formData.type === 'virtuel' ? 'elevated' : 'outlined'} 
-              padding="medium"
-              style={{ 
-                backgroundColor: formData.type === 'virtuel' ? theme.primary : theme.backgroundSecondary,
-                alignItems: 'center',
-                borderColor: formData.type === 'virtuel' ? theme.primary : theme.border,
-              }}
-            >
-              <View style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: formData.type === 'virtuel' ? 'rgba(255,255,255,0.2)' : theme.background,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: spacing[2],
-              }}>
-                <Ionicons 
-                  name="videocam" 
-                  size={24} 
-                  color={formData.type === 'virtuel' ? theme.buttonText : theme.textSecondary} 
-                />
-              </View>
-              <Text 
-                variant="body" 
-                weight="semibold"
-                style={{ 
-                  color: formData.type === 'virtuel' ? theme.buttonText : theme.text,
-                  textAlign: 'center'
-                }}
-              >
-                Virtuel
-              </Text>
-              <Text 
-                variant="caption" 
-                style={{ 
-                  color: formData.type === 'virtuel' ? 'rgba(255,255,255,0.8)' : theme.textSecondary,
-                  textAlign: 'center',
-                  marginTop: spacing[1]
-                }}
-              >
-                En ligne
-              </Text>
-            </Card>
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+      if (!owner_id) {
+        Alert.alert('Erreur', 'ID utilisateur manquant. Veuillez vous reconnecter.');
+        return;
+      }
 
-  const renderCategorySelector = () => (
-    <View style={{ marginBottom: spacing[6] }}>
-      <Text variant="h3" weight="semibold" style={{ 
-        marginBottom: spacing[4],
-        color: theme.text,
-        textAlign: 'center'
-      }}>
-        Catégorie
-      </Text>
+      // Debug: Afficher les valeurs reçues
+      console.log(' Debug - Valeurs reçues:', {
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        startTime: formData.startTime,
+        endTime: formData.endTime
+      });
 
-      <View style={{ 
-        flexDirection: 'row', 
-        flexWrap: 'wrap', 
-        justifyContent: 'space-between',
-        gap: spacing[3]
-      }}>
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={{ width: (width - spacing[10] - spacing[3]) / 2 }}
-            onPress={() => setFormData({...formData, category: category.id})}
-          >
-            <Animated.View style={{
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }}>
-              <Card 
-                variant={formData.category === category.id ? 'elevated' : 'outlined'} 
-                padding="medium"
-                style={{ 
-                  backgroundColor: formData.category === category.id ? category.color : category.lightColor,
-                  alignItems: 'center',
-                  minHeight: 100,
-                  borderColor: formData.category === category.id ? category.color : theme.border,
-                  borderWidth: formData.category === category.id ? 2 : 1,
-                }}
-              >
-                <View style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: formData.category === category.id ? 'rgba(255,255,255,0.2)' : category.color,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: spacing[2],
-                }}>
-                  <Ionicons 
-                    name={category.icon as any} 
-                    size={20} 
-                    color={formData.category === category.id ? '#FFF' : '#FFF'} 
-                  />
-                </View>
-                <Text 
-                  variant="body" 
-                  weight="medium"
-                  style={{ 
-                    color: formData.category === category.id ? '#FFF' : category.color,
-                    textAlign: 'center',
-                    fontSize: 14,
-                  }}
-                >
-                  {category.name}
-                </Text>
-              </Card>
-            </Animated.View>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
+      // PARSER LES DATES FRANÇAISES (DD/MM/YYYY)
+      let startDate: Date;
+      let endDate: Date;
+
+      try {
+        // Le DatePicker retourne DD/MM/YYYY, il faut le parser
+        if (formData.startDate && formData.startDate.includes('/')) {
+          const [day, month, year] = formData.startDate.split('/');
+          startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        } else {
+          startDate = new Date(formData.startDate);
+        }
+
+        if (formData.endDate && formData.endDate.includes('/')) {
+          const [day, month, year] = formData.endDate.split('/');
+          endDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        } else {
+          endDate = new Date(formData.endDate);
+        }
+      } catch (error) {
+        console.error('❌ Erreur parsing des dates:', error);
+        Alert.alert('Erreur', 'Format de date invalide. Veuillez sélectionner des dates valides.');
+        return;
+      }
+
+      // Validation des dates
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        Alert.alert('Erreur', 'Format de date invalide. Veuillez sélectionner des dates valides.');
+        return;
+      }
+
+      if (endDate <= startDate) {
+        Alert.alert('Erreur', 'La date de fin doit être postérieure à la date de début');
+        return;
+      }
+
+      // Combiner les dates et heures en format DATETIME MySQL compatible
+      let startDateTime = '';
+      let endDateTime = '';
+
+      if (formData.startTime) {
+        // Si une heure de début est sélectionnée, l'ajouter à la date
+        const [hours, minutes] = formData.startTime.split(':');
+        const dateObj = new Date(startDate);
+        dateObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        // Format MySQL DATETIME: YYYY-MM-DD HH:MM:SS
+        startDateTime = dateObj.getFullYear() + '-' + 
+                      String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(dateObj.getDate()).padStart(2, '0') + ' ' + 
+                      String(dateObj.getHours()).padStart(2, '0') + ':' + 
+                      String(dateObj.getMinutes()).padStart(2, '0') + ':' + 
+                      String(dateObj.getSeconds()).padStart(2, '0');
+      } else {
+        // Si pas d'heure, utiliser minuit (00:00:00)
+        const dateObj = new Date(startDate);
+        dateObj.setHours(0, 0, 0, 0);
+        startDateTime = dateObj.getFullYear() + '-' + 
+                      String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(dateObj.getDate()).padStart(2, '0') + ' 00:00:00';
+      }
+
+      if (formData.endTime) {
+        // Si une heure de fin est sélectionnée, l'ajouter à la date
+        const [hours, minutes] = formData.endTime.split(':');
+        const dateObj = new Date(endDate);
+        dateObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        // Format MySQL DATETIME: YYYY-MM-DD HH:MM:SS
+        endDateTime = dateObj.getFullYear() + '-' + 
+                    String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(dateObj.getDate()).padStart(2, '0') + ' ' + 
+                    String(dateObj.getHours()).padStart(2, '0') + ':' + 
+                    String(dateObj.getMinutes()).padStart(2, '0') + ':' + 
+                    String(dateObj.getSeconds()).padStart(2, '0');
+      } else {
+        // Si pas d'heure, utiliser minuit (00:00:00)
+        const dateObj = new Date(endDate);
+        dateObj.setHours(0, 0, 0, 0);
+        endDateTime = dateObj.getFullYear() + '-' + 
+                    String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(dateObj.getDate()).padStart(2, '0') + ' 00:00:00';
+      }
+
+      // Préparer les données pour l'API
+      const eventData = {
+        title: formData.title,
+        description: formData.description || '',
+        start_date: startDateTime,
+        end_date: endDateTime,
+        location: formData.location,
+        owner_id: owner_id,
+      };
+
+      console.log(' Données de l\'événement à créer:', eventData);
+      console.log('👤 Owner ID récupéré:', owner_id);
+      console.log('📅 Format start_date (MySQL):', startDateTime);
+      console.log('📅 Format end_date (MySQL):', endDateTime);
+
+      // Appel API pour créer l'événement
+      const response = await eventService.createEvent(eventData);
+      
+      if (response.success) {
+        Alert.alert('Succès', 'Événement créé avec succès !', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      } else {
+        Alert.alert('Erreur', response.error || 'Impossible de créer l\'événement');
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de l\'événement:', error);
+      Alert.alert('Erreur', 'Impossible de créer l\'événement. Veuillez réessayer.');
+    }
+  };
 
   return (
     <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
-      
-
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -347,24 +247,31 @@ export default function CreateEventModal() {
                     <Ionicons name="calendar" size={28} color={theme.buttonText} />
                   </View>
                   <Text variant="h3" weight="semibold" style={{ color: theme.text }}>
-                    Informations principales
+                    Créer un événement
+                  </Text>
+                  <Text variant="body" style={{ 
+                    color: theme.textSecondary, 
+                    textAlign: 'center',
+                    marginTop: spacing[1]
+                  }}>
+                    Remplissez les informations de votre événement
                   </Text>
                 </View>
 
                 <Input
-                  label="Titre de l'événement"
+                  label="Titre de l'événement *"
                   placeholder="Ex: Anniversaire de Marie"
                   value={formData.title}
-                  onChangeText={(value) => setFormData({...formData, title: value})}
+                  onChangeText={(value) => updateFormField('title', value)}
                   required
                   leftIcon="create"
                 />
 
                 <Input
                   label="Description"
-                  placeholder="Décrivez votre événement..."
+                  placeholder="Décrivez votre événement (optionnel)..."
                   value={formData.description}
-                  onChangeText={(value) => setFormData({...formData, description: value})}
+                  onChangeText={(value) => updateFormField('description', value)}
                   multiline
                   numberOfLines={3}
                   leftIcon="document-text"
@@ -373,34 +280,88 @@ export default function CreateEventModal() {
                 <View style={[layoutStyles.row, layoutStyles.gap3]}>
                   <View style={{ flex: 1 }}>
                     <DatePicker
-                      label="Date"
-                      value={formData.date}
-                      onChangeText={(value) => setFormData({...formData, date: value})}
+                      label="Date de début *"
+                      value={formData.startDate}
+                      onChangeText={(value) => updateFormField('startDate', value)}
                       required
                     />
                   </View>
                   <View style={{ flex: 1 }}>
                     <TimePicker
-                      label="Heure"
-                      value={formData.time}
-                      onChangeText={(value) => setFormData({...formData, time: value})}
+                      label="Heure de début"
+                      value={formData.startTime}
+                      onChangeText={(value) => updateFormField('startTime', value)}
+                    />
+                  </View>
+                </View>
+
+                <View style={[layoutStyles.row, layoutStyles.gap3]}>
+                  <View style={{ flex: 1 }}>
+                    <DatePicker
+                      label="Date de fin *"
+                      value={formData.endDate}
+                      onChangeText={(value) => updateFormField('endDate', value)}
+                      required
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TimePicker
+                      label="Heure de fin"
+                      value={formData.endTime}
+                      onChangeText={(value) => updateFormField('endTime', value)}
                     />
                   </View>
                 </View>
 
                 <Input
-                  label="Lieu"
+                  label="Lieu *"
                   placeholder="Adresse ou nom du lieu"
                   value={formData.location}
-                  onChangeText={(value) => setFormData({...formData, location: value})}
+                  onChangeText={(value) => updateFormField('location', value)}
                   required
                   leftIcon="location-outline"
                 />
+
+                {/* Informations sur la structure de la base de données */}
+                <View style={{
+                  padding: spacing[3],
+                  backgroundColor: theme.backgroundSecondary,
+                  borderRadius: 8,
+                  borderLeftWidth: 3,
+                  borderLeftColor: theme.primary,
+                }}>
+                  <Text variant="caption" style={{ 
+                    color: theme.textSecondary,
+                    fontStyle: 'italic'
+                  }}>
+                    💡 Les champs marqués d'un * sont obligatoires. 
+                    L'événement sera automatiquement associé à votre compte.
+                  </Text>
+                  <Text variant="caption" style={{ 
+                    color: theme.textSecondary,
+                    fontStyle: 'italic',
+                    marginTop: spacing[2]
+                  }}>
+                    📅 Structure: start_date et end_date (DATETIME MySQL) - Format: YYYY-MM-DD HH:MM:SS
+                    Si aucune heure n'est spécifiée, l'événement sera programmé à 00:00:00.
+                  </Text>
+                  <Text variant="caption" style={{ 
+                    color: theme.textSecondary,
+                    fontStyle: 'italic',
+                    marginTop: spacing[2]
+                  }}>
+                    ✅ Validation: La date de fin doit être postérieure à la date de début.
+                  </Text>
+                  <Text variant="caption" style={{ 
+                    color: theme.textSecondary,
+                    fontStyle: 'italic',
+                    marginTop: spacing[2]
+                  }}>
+                    👤 Owner ID: Récupéré automatiquement depuis votre session connectée.
+                  </Text>
+                </View>
               </View>
             </Card>
-
-            {renderTypeSelector()}
-            {renderCategorySelector()}
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

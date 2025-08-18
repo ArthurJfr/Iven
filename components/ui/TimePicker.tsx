@@ -48,6 +48,13 @@ export default function TimePicker({
     setIsModalVisible(false);
   };
 
+  // Initialiser selectedTime avec la valeur actuelle si elle existe
+  React.useEffect(() => {
+    if (value && typeof value === 'string') {
+      setSelectedTime(value);
+    }
+  }, [value]);
+
   // Générer les créneaux horaires (30 minutes d'intervalle)
   const generateTimeSlots = () => {
     const slots = [];

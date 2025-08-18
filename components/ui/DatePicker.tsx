@@ -35,7 +35,10 @@ export default function DatePicker({
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | undefined) => {
+    if (!date || isNaN(date.getTime())) {
+      return '';
+    }
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
@@ -43,15 +46,12 @@ export default function DatePicker({
     });
   };
 
-  const handleDateChange = (date: Date) => {
-    setSelectedDate(date);
-    const formattedDate = formatDate(date);
-    onChangeText?.(formattedDate);
-  };
-
   const handleConfirm = () => {
-    const formattedDate = formatDate(selectedDate);
-    onChangeText?.(formattedDate);
+    const currentSelectedDate = getSelectedDateObject();
+    if (currentSelectedDate) {
+      const formattedDate = formatDate(currentSelectedDate);
+      onChangeText?.(formattedDate);
+    }
     setIsModalVisible(false);
   };
 
@@ -65,15 +65,59 @@ export default function DatePicker({
     for (let i = 0; i < 30; i++) {
       const date = new Date();
       date.setDate(date.getDate() + i);
-      options.push({
-        label: formatDate(date),
-        value: date,
-      });
+      
+      // Vérifier que la date est valide avant de l'utiliser
+      if (!isNaN(date.getTime())) {
+        const formattedLabel = formatDate(date);
+        if (formattedLabel) {
+          options.push({
+            label: formattedLabel,
+            value: date.toISOString().split('T')[0], // Format YYYY-MM-DD
+            dateObject: date, // Garder l'objet Date pour la logique interne
+          });
+        }
+      }
     }
     return options;
   };
 
   const dateOptions = generateDateOptions();
+
+  // Initialiser selectedDate avec la valeur actuelle si elle existe
+  React.useEffect(() => {
+    if (value) {
+      try {
+        const parsedDate = new Date(value);
+        if (!isNaN(parsedDate.getTime())) {
+          setSelectedDate(parsedDate);
+        }
+      } catch (error) {
+        console.warn('DatePicker: Impossible de parser la date:', value);
+      }
+    }
+  }, [value]);
+
+  // Trouver l'objet Date correspondant à la valeur sélectionnée
+  const getSelectedDateObject = () => {
+    if (!selectedDate) return null;
+    
+    const selectedDateString = selectedDate.toISOString().split('T')[0];
+    const option = dateOptions.find(opt => opt.value === selectedDateString);
+    return option?.dateObject || selectedDate;
+  };
+
+  const handleDateChange = (dateValue: string) => {
+    try {
+      const dateObj = new Date(dateValue);
+      if (!isNaN(dateObj.getTime())) {
+        setSelectedDate(dateObj);
+        const formattedDate = formatDate(dateObj);
+        onChangeText?.(formattedDate);
+      }
+    } catch (error) {
+      console.warn('DatePicker: Erreur lors du changement de date:', error);
+    }
+  };
 
   return (
     <View>
@@ -113,7 +157,7 @@ export default function DatePicker({
 
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={selectedDate}
+                selectedValue={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
                 onValueChange={(itemValue) => handleDateChange(itemValue)}
                 style={[styles.picker, { color: theme.text }]}
                 itemStyle={{ color: theme.text }}
