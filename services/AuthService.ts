@@ -1,7 +1,15 @@
 import { apiService } from './ApiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ApiResponse } from '../types/api';
-import type { User, AuthResponse, LoginRequest, RegisterRequest, ConfirmAccountRequest } from '../types/auth';
+import type { User, LoginRequest, RegisterRequest, ConfirmAccountRequest, VerifyTokenResponse } from '../types/auth';
+import { API_CONFIG } from './ApiConfig';
+
+// Type pour la réponse d'authentification locale
+interface AuthResponse {
+  token: string;
+  user: User;
+  expiresAt: string;
+}
 
 /**
  * Service d'authentification utilisant l'ApiService
@@ -26,66 +34,76 @@ class AuthService {
       await this.repairStoredAuth();
       
       const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
-      const userData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
-      const expiresAt = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_EXPIRES);
       
-      // Validation des données récupérées
-      if (!token || !userData) {
-        console.info('ℹ️ Données d\'authentification incomplètes, nettoyage effectué');
-        await this.clearStoredAuth();
+      // Si pas de token stocké, pas d'authentification
+      if (!token) {
+        console.info('ℹ️ Aucun token d\'authentification trouvé');
         return false;
       }
 
-      // Validation du format des données utilisateur
-      let parsedUserData;
-      try {
-        parsedUserData = JSON.parse(userData);
-      } catch (parseError) {
-        console.error('❌ Erreur parsing données utilisateur:', parseError);
-        await this.clearStoredAuth();
-        return false;
-      }
-
-      // Validation de la structure des données utilisateur
-      if (!parsedUserData.id || !parsedUserData.email) {
-        console.warn('⚠️ Données utilisateur invalides, nettoyage effectué');
-        await this.clearStoredAuth();
-        return false;
-      }
-
-      // Validation de la date d'expiration (si présente)
-      if (expiresAt && expiresAt.trim() !== '') {
-        const expiry = new Date(expiresAt);
-        const now = new Date();
+      // Vérifier la validité du token avec l'API
+      console.info('🔐 Vérification du token JWT...');
+      const verificationResult = await this.verifyToken(token);
+      
+      if (verificationResult.success && verificationResult.data?.isConnected) {
+        // Token valide - restaurer la session
+        this.authToken = token;
+        this.currentUser = verificationResult.data.user!;
+        apiService.setAuthToken(token);
         
-        if (isNaN(expiry.getTime())) {
-          console.warn('⚠️ Date d\'expiration invalide, nettoyage effectué');
-          await this.clearStoredAuth();
-          return false;
-        }
-        
-        if (now >= expiry) {
-          // Session expirée - nettoyer
-          await this.clearStoredAuth();
-          console.info('⚠️ Session expirée, nettoyage effectué');
-          return false;
-        }
+        console.info('✅ Token JWT valide, session restaurée');
+        return true;
       } else {
-        console.info('ℹ️ Pas de date d\'expiration définie, session considérée comme valide');
+        // Token invalide ou expiré - nettoyer
+        console.warn('⚠️ Token JWT invalide ou expiré, nettoyage effectué');
+        await this.clearStoredAuth();
+        return false;
       }
-      
-      // Session valide - restaurer les données
-      this.authToken = token;
-      this.currentUser = parsedUserData;
-      apiService.setAuthToken(token);
-      
-      console.info('✅ Session restaurée depuis le stockage');
-      return true;
       
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation de l\'auth:', error);
       await this.clearStoredAuth();
       return false;
+    }
+  }
+
+  /**
+   * Vérifier la validité d'un token JWT avec l'API
+   */
+  async verifyToken(token: string): Promise<ApiResponse<VerifyTokenResponse>> {
+    try {
+      console.info('🔍 Vérification du token JWT...');
+      
+      // Configurer temporairement le token pour cette requête
+      apiService.setAuthToken(token);
+      
+      const response = await apiService.get<VerifyTokenResponse>(API_CONFIG.endpoints.auth.verify_token);
+      
+      if (response.success && response.data) {
+        console.info('✅ Token JWT vérifié:', response.data.message);
+        return response;
+      } else {
+        console.warn('⚠️ Token JWT invalide:', response.error);
+        return response;
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la vérification du token:', error);
+      
+      // Analyser le type d'erreur
+      let errorMessage = 'Erreur lors de la vérification du token';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Token expiré ou invalide';
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Aucun token fourni';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'Problème de connexion internet';
+      }
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
     }
   }
 
@@ -295,10 +313,10 @@ class AuthService {
             email: response.data.user.email,
             fname: response.data.user.fname || '',
             lname: response.data.user.lname || '',
-            active: true, // Maintenant confirmé
-            avatar: response.data.user.avatar,
-            createdAt: response.data.user.createdAt || new Date().toISOString(),
-            updatedAt: response.data.user.updatedAt || new Date().toISOString(),
+            active: 1, // Maintenant confirmé (1 = actif)
+            avatar_url: response.data.user.avatar_url,
+            created_at: response.data.user.created_at || new Date().toISOString(),
+            updated_at: response.data.user.updated_at || new Date().toISOString(),
           },
           expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(), // 72h comme backend
         };
@@ -340,7 +358,7 @@ class AuthService {
 
       if (response.success && response.data) {
         // Vérifier le statut du compte
-        const isConfirmed = response.data.user.active;
+        const isConfirmed = response.data.user.active === 1;
         
         if (isConfirmed) {
           // Compte confirmé - sauvegarder complètement les données d'auth
@@ -540,7 +558,7 @@ class AuthService {
    * Vérifier si le compte est confirmé
    */
   isAccountConfirmed(): boolean {
-    return this.currentUser?.active ?? false;
+    return this.currentUser?.active === 1;
   }
 
 

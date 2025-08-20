@@ -1,38 +1,88 @@
-// Types pour l'authentification
+// Types pour l'authentification - ADAPTÉS À VOS ROUTES API
 
+// Type User harmonisé avec vos routes API
 export interface User {
-  id: string;
-  email: string;
-  username: string;
-  fname: string;
-  lname: string;
-  avatar?: string;
-  active: boolean;
-  bio?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  id: number; // INT(11) dans votre DB
+  username: string; // VARCHAR(255) NOT NULL
+  fname: string; // VARCHAR(255) NOT NULL
+  lname: string; // VARCHAR(255) NOT NULL
+  email: string; // VARCHAR(255) NOT NULL UNIQUE
+  password?: string; // VARCHAR(255) - Généralement omis côté frontend
+  active: number; // tinyint(1) - 0 ou 1 selon vos routes
+  avatar_url?: string; // VARCHAR(255)
+  bio?: string; // TEXT
+  phone?: string; // VARCHAR(20)
+  timezone?: string; // VARCHAR(50)
+  notification_preferences?: object; // JSON field
+  reset_token?: string; // VARCHAR(255)
+  reset_token_expires?: string; // DATETIME
+  confirmation_code?: string; // VARCHAR(6)
+  confirmation_code_expires?: string; // DATETIME
+  created_at: string; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at: string; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
 
-export interface AuthResponse {
+// Types pour les réponses d'authentification selon vos routes
+export interface RegisterResponse {
+  message: string;
+  userId: number;
+}
+
+export interface ConfirmAccountResponse {
+  message: string;
+  email: string;
   token: string;
-  refreshToken?: string;
   user: User;
-  expiresAt: string;
+}
+
+export interface ConfirmAccountError {
+  message: string;
+  error: string;
+}
+
+export interface ResendConfirmationResponse {
+  message: string;
+}
+
+export interface LoginResponse {
+  message: string;
+  token: string;
+  user: User;
+}
+
+export interface LoginNotActivatedResponse {
+  message: string;
+  code: string;
+  user: Omit<User, 'id' | 'password' | 'active'> & { active: number };
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface LogoutResponse {
+  message: string;
+}
+
+// Type pour la vérification de token JWT
+export interface VerifyTokenResponse {
+  message: string;
+  isConnected: boolean;
+  user?: User; // Présent seulement si isConnected = true
 }
 
 // Requêtes d'authentification
 export interface LoginRequest {
   email: string;
   password: string;
-  rememberMe?: boolean;
 }
 
 export interface RegisterRequest {
   username: string;
-  fname: string;
-  lname: string;
   email: string;
   password: string;
+  fname: string;
+  lname: string;
 }
 
 export interface ConfirmAccountRequest {
@@ -58,6 +108,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isCheckingToken: boolean; // Nouveau : pour indiquer si on vérifie le token
 }
 
 // Actions pour le contexte d'authentification
@@ -67,7 +118,10 @@ export type AuthAction =
   | { type: 'AUTH_ERROR'; payload: string }
   | { type: 'AUTH_LOGOUT' }
   | { type: 'AUTH_CLEAR_ERROR' }
-  | { type: 'AUTH_UPDATE_USER'; payload: User };
+  | { type: 'AUTH_UPDATE_USER'; payload: User }
+  | { type: 'AUTH_CHECK_TOKEN_START' }
+  | { type: 'AUTH_CHECK_TOKEN_SUCCESS'; payload: { user: User; token: string } }
+  | { type: 'AUTH_CHECK_TOKEN_FAILURE' };
 
 // Types pour la validation
 export interface ValidationRules {
@@ -90,7 +144,7 @@ export interface ValidationRules {
   };
 }
 
-// Types pour les erreurs spécifiques
+// Types pour les erreurs spécifiques selon vos routes
 export interface AuthErrorCodes {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS';
   ACCOUNT_NOT_CONFIRMED: 'ACCOUNT_NOT_CONFIRMED';

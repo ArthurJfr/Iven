@@ -1,4 +1,5 @@
-// Types pour les réponses API génériques
+// Types pour les réponses API génériques - ADAPTÉS À VOS ROUTES API
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -23,24 +24,60 @@ export interface AuthResponse {
   token: string;
   refreshToken?: string;
   user: {
-    id: string;
+    id: number;
     email: string;
-    name: string;
-    avatar?: string;
+    username: string;
+    fname: string;
+    lname: string;
+    active: number;
+    avatar_url?: string;
   };
   expiresAt: string;
 }
 
-// Types pour le health check
+// Types pour le health check selon vos routes API
 export interface HealthCheckResponse {
-  status: 'healthy' | 'unhealthy';
-  timestamp: string;
-  version?: string;
-  uptime?: number;
-  services?: {
-    database?: 'healthy' | 'unhealthy';
-    redis?: 'healthy' | 'unhealthy';
-    storage?: 'healthy' | 'unhealthy';
+  status: 'healthy';
+  server: {
+    status: 'operational';
+    timestamp: string;
+    uptime: number;
+    environment: string;
+    version: string;
+  };
+  services: {
+    mongodb: {
+      status: 'healthy';
+      state: 'connected';
+      message: string;
+    };
+    mysql: {
+      status: 'healthy';
+      message: string;
+    };
+  };
+  performance: {
+    responseTime: string;
+    memory: {
+      used: string;
+      total: string;
+    };
+  };
+}
+
+// Health check protégé avec informations utilisateur
+export interface ProtectedHealthCheckResponse extends HealthCheckResponse {
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+    lastLogin: string | null;
+  };
+  security: {
+    authenticated: boolean;
+    tokenValid: boolean;
+    userAuthorized: boolean;
   };
 }
 
@@ -90,4 +127,20 @@ export interface QueryParams {
   order?: 'asc' | 'desc';
   search?: string;
   filters?: Record<string, any>;
+}
+
+// Types pour les réponses de messages simples
+export interface SimpleMessageResponse {
+  message: string;
+}
+
+// Types pour les réponses avec ID
+export interface IdResponse {
+  id: number;
+}
+
+// Types pour les réponses de suppression
+export interface DeleteResponse {
+  message: string;
+  id?: number;
 }

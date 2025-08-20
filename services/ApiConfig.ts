@@ -35,15 +35,24 @@ export const API_CONFIG = {
     auth: {
       login: '/auth/login',
       register: '/auth/register',
-      refresh: '/auth/refresh',
+      confirm: '/auth/confirm',
+      resend_confirmation: '/auth/resend-confirmation-email',
+      forgot_password: '/auth/forgot-password',
       logout: '/auth/logout',
+      verify_token: '/auth/is-connected', // Nouveau : vérification de token
     },
     events: {
-      list: '/events',
-      create: '/events',
-      detail: (id: string) => `/events/${id}`,
-      update: (id: string) => `/events/${id}`,
-      delete: (id: string) => `/events/${id}`,
+      create: '/event/create',
+      update: (id: string) => `/event/${id}`,
+      delete: (id: string) => `/event/${id}`,
+      get: (id: string) => `/event/${id}`,
+      owner: (ownerId: string) => `/event/owner/${ownerId}`,
+      participant: (participantId: string) => `/event/participant/${participantId}`,
+      participants: {
+        list: (eventId: string) => `/event/${eventId}/participants`,
+        add: (eventId: string) => `/event/${eventId}/participants`,
+        remove: (eventId: string, userId: string) => `/event/${eventId}/participants/${userId}`,
+      },
     },
     users: {
       profile: '/users/profile',
@@ -54,6 +63,13 @@ export const API_CONFIG = {
       upload: '/media/upload',
       list: '/media',
       delete: (id: string) => `/media/${id}`,
+    },
+    tasks: {
+      create: '/task/create',
+      update: (id: string) => `/task/${id}`,
+      delete: (id: string) => `/task/${id}`,
+      get: (id: string) => `/task/${id}`,
+      list: '/task',
     },
   },
 };

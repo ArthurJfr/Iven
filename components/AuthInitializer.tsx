@@ -20,7 +20,7 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
   const { theme } = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isCheckingToken } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
@@ -64,8 +64,17 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
           color="secondary" 
           style={styles.loadingText}
         >
-          Chargement...
+          {isCheckingToken ? 'Vérification de la connexion...' : 'Chargement...'}
         </Text>
+        {isCheckingToken && (
+          <Text 
+            variant="caption" 
+            color="tertiary" 
+            style={styles.checkingText}
+          >
+            Vérification du token JWT en cours...
+          </Text>
+        )}
       </View>
     );
   }
@@ -83,5 +92,10 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: spacing[4],
     textAlign: 'center',
+  },
+  checkingText: {
+    marginTop: spacing[2],
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });

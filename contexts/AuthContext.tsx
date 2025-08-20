@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isCheckingToken: boolean; // Nouveau : pour indiquer si on vérifie le token
   login: (user: User, token: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
@@ -21,12 +22,14 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingToken, setIsCheckingToken] = useState(false); // Nouveau état
 
   const isAuthenticated = !!(user && authService.getAuthToken());
 
   const initialize = async () => {
     try {
       setIsLoading(true);
+      setIsCheckingToken(true); // Commencer la vérification du token
       console.log('🚀 Initialisation AuthContext...');
       
       const sessionRestored = await authService.initialize();
@@ -46,6 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(null);
     } finally {
       setIsLoading(false);
+      setIsCheckingToken(false); // Terminer la vérification du token
     }
   };
 
@@ -102,6 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isAuthenticated,
     isLoading,
+    isCheckingToken, // Inclure le nouvel état
     login,
     logout,
     updateUser,
