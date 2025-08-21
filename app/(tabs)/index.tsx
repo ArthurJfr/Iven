@@ -9,7 +9,12 @@ import Card from '../../components/ui/Card';
 import Header from '../../components/ui/organisms/Header';
 import Avatar from '../../components/ui/atoms/Avatar';
 import Badge from '../../components/ui/atoms/Badge';
+import EventCard from '../../components/ui/EventCard';
 import { useAuth } from '../../contexts/AuthContext';
+import { eventService } from '../../services/EventService';
+import { taskService } from '../../services/TaskService';
+import { Event } from '../../types/events';
+import { Task } from '../../types/tasks';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -19,17 +24,115 @@ export default function HomeScreen() {
   // Utiliser le contexte d'authentification
   const { user, logout } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [userTasks, setUserTasks] = useState<Task[]>([]);
+  const [stats, setStats] = useState({
+    eventsThisMonth: 0,
+    pendingTasks: 0,
+    totalParticipants: 0
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
     
-    // Ici vous pourrez ajouter le chargement des événements depuis l'API
-    // await loadEvents();
-    
-    setTimeout(() => {
+    try {
+      // Charger les données en parallèle
+      await Promise.all([
+        loadUserEvents(),
+        loadUserTasks(),
+        calculateStats()
+      ]);
+    } catch (error) {
+      console.error('❌ Erreur lors du rafraîchissement:', error);
+    } finally {
       setRefreshing(false);
-    }, 1000);
+    }
   };
+
+  // Charger les événements de l'utilisateur
+  const loadUserEvents = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await eventService.getEventsByParticipantId(Number(user.id));
+      if (response.success && response.data) {
+        // Filtrer les événements à venir (ce mois)
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const thisYear = now.getFullYear();
+        
+        const eventsThisMonth = response.data.filter(event => {
+          const eventDate = new Date(event.start_date);
+          return eventDate.getMonth() === thisMonth && eventDate.getFullYear() === thisYear;
+        });
+        
+        setUpcomingEvents(eventsThisMonth.slice(0, 2)); // Garder seulement 2 événements
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des événements:', error);
+    }
+  };
+
+  // Charger les tâches de l'utilisateur
+  const loadUserTasks = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await taskService.getTasksByParticipantId(Number(user.id));
+      if (response.success && response.data) {
+        setUserTasks(response.data);
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des tâches:', error);
+    }
+  };
+
+  // Calculer les statistiques
+  const calculateStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Événements ce mois
+      const eventsResponse = await eventService.getEventsByParticipantId(Number(user.id));
+      const eventsThisMonth = eventsResponse.success && eventsResponse.data ? 
+        eventsResponse.data.filter(event => {
+          const eventDate = new Date(event.start_date);
+          const now = new Date();
+          return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
+        }).length : 0;
+
+      // Tâches en attente (non validées)
+      const tasksResponse = await taskService.getTasksByParticipantId(Number(user.id));
+      const pendingTasks = tasksResponse.success && tasksResponse.data ? 
+        tasksResponse.data.filter(task => !task.validated_by).length : 0;
+
+      // Total participants (compter tous les participants de tous les événements)
+      let totalParticipants = 0;
+      if (eventsResponse.success && eventsResponse.data) {
+        for (const event of eventsResponse.data) {
+          const participantsResponse = await eventService.getEventParticipants(event.id);
+          if (participantsResponse.success && participantsResponse.data?.participants) {
+            totalParticipants += participantsResponse.data.participants.length;
+          }
+        }
+      }
+
+      setStats({
+        eventsThisMonth,
+        pendingTasks,
+        totalParticipants
+      });
+    } catch (error) {
+      console.error('❌ Erreur lors du calcul des statistiques:', error);
+    }
+  };
+
+  // Charger les données au montage
+  useEffect(() => {
+    if (user?.id) {
+      onRefresh();
+    }
+  }, [user?.id]);
 
   // Fallback si pas d'utilisateur connecté
   if (!user) {
@@ -44,31 +147,25 @@ export default function HomeScreen() {
     );
   }
 
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: 'Anniversaire de Marie',
-      date: '15 Jan',
-      time: '19:00',
-      attendees: 12,
-      category: 'Anniversaire',
-      color: '#FF6B9D'
-    },
-    {
-      id: 2,
-      title: 'Réunion équipe',
-      date: '18 Jan', 
-      time: '14:30',
-      attendees: 8,
-      category: 'Professionnel',
-      color: '#4ECDC4'
-    }
-  ];
-
   const quickStats = [
-    { label: 'Événements\nce mois', value: '5', color: theme.primary, icon: 'calendar-outline' },
-    { label: 'Tâches\nà faire', value: '8', color: '#FF9500', icon: 'checkmark-circle-outline' },
-    { label: 'Participants\ntotal', value: '24', color: '#34C759', icon: 'people-outline' },
+    { 
+      label: 'Événements\nce mois', 
+      value: stats.eventsThisMonth.toString(), 
+      color: theme.primary, 
+      icon: 'calendar-outline' 
+    },
+    { 
+      label: 'Tâches\nà faire', 
+      value: stats.pendingTasks.toString(), 
+      color: '#FF9500', 
+      icon: 'checkmark-circle-outline' 
+    },
+    { 
+      label: 'Participants\ntotal', 
+      value: stats.totalParticipants.toString(), 
+      color: '#34C759', 
+      icon: 'people-outline' 
+    },
   ];
 
   const quickActions = [
@@ -88,7 +185,7 @@ export default function HomeScreen() {
     },
     {
       title: 'Mes tâches',
-      subtitle: '8 en attente',
+      subtitle: `${stats.pendingTasks} en attente`,
       icon: 'checkmark-done',
       color: '#FF9500',
       action: () => router.push('/tasks')
@@ -123,7 +220,7 @@ export default function HomeScreen() {
           <View style={[layoutStyles.row, { alignItems: 'center', marginBottom: spacing[6] }]}>
             <Avatar
               size="large"
-              source={user.avatar ? { uri: user.avatar } : undefined}
+              source={undefined}
               fallbackIcon="person"
               style={{ marginRight: spacing[4] }}
             />
@@ -234,31 +331,14 @@ export default function HomeScreen() {
           {upcomingEvents.length > 0 ? (
             <View style={{ gap: spacing[3] }}>
               {upcomingEvents.map((event) => (
-                <TouchableOpacity key={event.id} onPress={() => router.push(`/events/${event.id}`)}>
-                  <Card variant="elevated" padding="medium">
-                    <View style={[layoutStyles.rowBetween, { marginBottom: spacing[2] }]}>
-                      <Badge text={event.category} color={event.color} />
-                      <Text variant="caption" color="secondary">
-                        {event.attendees} participants
-                      </Text>
-                    </View>
-                    
-                    <Text variant="body" weight="semibold" style={{ marginBottom: spacing[2] }}>
-                      {event.title}
-                    </Text>
-                    
-                    <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                      <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} style={{ marginRight: spacing[2] }} />
-                      <Text variant="caption" color="secondary" style={{ marginRight: spacing[4] }}>
-                        {event.date}
-                      </Text>
-                      <Ionicons name="time-outline" size={16} color={theme.textSecondary} style={{ marginRight: spacing[2] }} />
-                      <Text variant="caption" color="secondary">
-                        {event.time}
-                      </Text>
-                    </View>
-                  </Card>
-                </TouchableOpacity>
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onPress={() => router.push(`/events/${event.id}`)}
+                  showLocation={true}
+                  compact={false}
+                  variant="elevated"
+                />
               ))}
             </View>
           ) : (

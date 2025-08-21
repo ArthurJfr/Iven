@@ -1,185 +1,194 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { createThemedStyles, spacing } from '../../styles';
+import Text from './atoms/Text';
 import Card from './Card';
+import Badge from './atoms/Badge';
+import { Event } from '../../types/events';
+import { taskService, TaskService } from '../../services/TaskService';
 
 interface EventCardProps {
-  id: string;
-  title: string;
-  date: string;
-  time?: string;
-  location?: string;
-  participants?: number;
-  maxParticipants?: number;
-  status?: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  event: Event;
   onPress?: () => void;
-  onFavoritePress?: () => void;
-  isFavorite?: boolean;
+  showLocation?: boolean;
+  showParticipants?: boolean;
+  compact?: boolean;
+  variant?: 'elevated' | 'outlined' | 'flat';
 }
 
-export default function EventCard({
-  id,
-  title,
-  date,
-  time,
-  location,
-  participants = 0,
-  maxParticipants,
-  status = 'upcoming',
-  onPress,
-  onFavoritePress,
-  isFavorite = false,
+export default function EventCard({ 
+  event, 
+  onPress, 
+  showLocation = true, 
+  showParticipants = false,
+  compact = false,
+  variant = 'elevated'
 }: EventCardProps) {
   const { theme } = useTheme();
+  const themedStyles = createThemedStyles(theme);
 
-  const getStatusColor = () => {
-    switch (status) {
-      case 'ongoing':
-        return '#10b981'; // Vert
-      case 'completed':
-        return '#6b7280'; // Gris
-      case 'cancelled':
-        return '#ef4444'; // Rouge
-      default:
-        return '#3b82f6'; // Bleu
+  const formatDate = (dateString: string) => {
+    return TaskService.formatDate(dateString);
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const getStatusConfig = (startDate: string, endDate: string) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (now < start) {
+      return { text: 'À venir', color: theme.primary, icon: 'time-outline' };
+    } else if (now >= start && now <= end) {
+      return { text: 'En cours', color: theme.warning, icon: 'play-circle-outline' };
+    } else {
+      return { text: 'Terminé', color: theme.success, icon: 'checkmark-circle-outline' };
     }
   };
 
-  const getStatusText = () => {
-    switch (status) {
-      case 'ongoing':
-        return 'En cours';
-      case 'completed':
-        return 'Terminé';
-      case 'cancelled':
-        return 'Annulé';
-      default:
-        return 'À venir';
-    }
-  };
+  const statusConfig = getStatusConfig(event.start_date, event.end_date);
 
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'ongoing':
-        return 'play-circle';
-      case 'completed':
-        return 'checkmark-circle';
-      case 'cancelled':
-        return 'close-circle';
-      default:
-        return 'calendar';
-    }
-  };
-
-  return (
-    <Card
-      onPress={onPress}
-      variant="elevated"
-      padding="medium"
-      margin={8}
-    >
-      <View style={localStyles.header}>
-        <View style={localStyles.titleSection}>
-          <Text style={[localStyles.title, { color: theme.text }]} numberOfLines={2}>
-            {title}
+  const CardContent = () => (
+    <View style={compact ? {} : { padding: spacing[4] }}>
+      {/* En-tête avec titre et statut */}
+      <View style={{ 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start', 
+        marginBottom: compact ? spacing[2] : spacing[3] 
+      }}>
+        <View style={{ flex: 1, marginRight: spacing[2] }}>
+          <Text 
+            variant={compact ? "body" : "h3"} 
+            weight="semibold" 
+            numberOfLines={2}
+            style={{ marginBottom: compact ? spacing[1] : spacing[2] }}
+          >
+            {event.title}
           </Text>
-          {onFavoritePress && (
-            <TouchableOpacity
-              onPress={onFavoritePress}
-              style={localStyles.favoriteButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          
+          {event.description && !compact && (
+            <Text 
+              variant="small" 
+              color="secondary" 
+              numberOfLines={2}
+              style={{ lineHeight: 18 }}
             >
-              <Ionicons
-                name={isFavorite ? 'heart' : 'heart-outline'}
-                size={20}
-                color={isFavorite ? '#ef4444' : theme.text}
-              />
-            </TouchableOpacity>
+              {event.description}
+            </Text>
           )}
         </View>
         
-        <View style={[localStyles.statusBadge, { backgroundColor: getStatusColor() }]}>
-          <Ionicons name={getStatusIcon() as any} size={12} color="#ffffff" />
-          <Text style={localStyles.statusText}>{getStatusText()}</Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Badge 
+            text={statusConfig.text} 
+            color={statusConfig.color}
+          />
         </View>
       </View>
 
-      <View style={localStyles.details}>
-        <View style={localStyles.detailRow}>
-          <Ionicons name="calendar" size={16} color={theme.text} />
-          <Text style={[localStyles.detailText, { color: theme.text }]}>
-            {date} {time && `• ${time}`}
-          </Text>
-        </View>
-
-        {location && (
-          <View style={localStyles.detailRow}>
-            <Ionicons name="location" size={16} color={theme.text} />
-            <Text style={[localStyles.detailText, { color: theme.text }]} numberOfLines={1}>
-              {location}
-            </Text>
-          </View>
-        )}
-
-        {maxParticipants && (
-          <View style={localStyles.detailRow}>
-            <Ionicons name="people" size={16} color={theme.text} />
-            <Text style={[localStyles.detailText, { color: theme.text }]}>
-              {participants}/{maxParticipants} participants
-            </Text>
-          </View>
-        )}
+      {/* Informations de date et heure */}
+      <View style={{ 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        marginBottom: compact ? spacing[2] : spacing[3] 
+      }}>
+        <Ionicons 
+          name="calendar-outline" 
+          size={compact ? 14 : 16} 
+          color={theme.textSecondary} 
+          style={{ marginRight: spacing[1] }} 
+        />
+        <Text 
+          variant={compact ? "small" : "body"} 
+          color="secondary"
+          style={{ marginRight: spacing[3] }}
+        >
+          {formatDate(event.start_date)}
+        </Text>
+        
+        <Ionicons 
+          name="time-outline" 
+          size={compact ? 14 : 16} 
+          color={theme.textSecondary} 
+          style={{ marginRight: spacing[1] }} 
+        />
+        <Text 
+          variant={compact ? "small" : "body"} 
+          color="secondary"
+        >
+          {formatTime(event.start_date)}
+        </Text>
       </View>
+
+      {/* Lieu et participants */}
+      {(showLocation || showParticipants) && (
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
+          {showLocation && event.location && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Ionicons 
+                name="location-outline" 
+                size={compact ? 14 : 16} 
+                color={theme.textSecondary} 
+                style={{ marginRight: spacing[1] }} 
+              />
+              <Text 
+                variant={compact ? "small" : "body"} 
+                color="secondary"
+                numberOfLines={1}
+                style={{ flex: 1 }}
+              >
+                {event.location}
+              </Text>
+            </View>
+          )}
+          
+          {showParticipants && (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons 
+                name="people-outline" 
+                size={compact ? 14 : 16} 
+                color={theme.textSecondary} 
+                style={{ marginRight: spacing[1] }} 
+              />
+              <Text 
+                variant={compact ? "small" : "body"} 
+                color="secondary"
+              >
+                Voir participants
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+        <Card variant={variant} padding={compact ? "small" : "medium"}>
+          <CardContent />
+        </Card>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <Card variant={variant} padding={compact ? "small" : "medium"}>
+      <CardContent />
     </Card>
   );
-}
-
-const localStyles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  titleSection: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
-  },
-  favoriteButton: {
-    padding: 4,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#ffffff',
-  },
-  details: {
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    flex: 1,
-  },
-}); 
+} 

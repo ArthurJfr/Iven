@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, SafeAreaView, Alert, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, SafeAreaView, Alert, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,83 +10,97 @@ import Card from '../../../../components/ui/Card';
 import Button from '../../../../components/ui/Button';
 import Header from '../../../../components/ui/organisms/Header';
 import Badge from '../../../../components/ui/atoms/Badge';
-import { Event } from '../../../../types/events';
-import eventsData from '../../../../data/events.json';
-import categoriesData from '../../../../data/categories.json';
-
-interface EventParticipant {
-  id: number;
-  name: string;
-  status: 'accepted' | 'pending' | 'declined';
-}
+import { Event, EventParticipantWithDetails } from '../../../../types/events';
+import { Task } from '../../../../types/tasks';
+import { eventService } from '../../../../services/EventService';
+import { taskService, TaskService } from '../../../../services/TaskService';
+import { useAuth } from '../../../../contexts/AuthContext';
 
 interface EnrichedEvent extends Event {
-  participantsList: EventParticipant[];
-  budget: {
-    total: number;
-    spent: number;
-    remaining: number;
-  };
-  type: string;
+  participants: EventParticipantWithDetails[];
+  tasks: Task[];
 }
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const themedStyles = createThemedStyles(theme);
+  
   const [event, setEvent] = useState<EnrichedEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function convertDateFormat(dateStr: string): string {
-    const [day, month, year] = dateStr.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  }
-
-  useEffect(() => {
-    const foundEvent = eventsData.find(e => e.id === id);
-    if (foundEvent) {
-      const enrichedEvent: EnrichedEvent = {
-        ...foundEvent,
-        date: convertDateFormat(foundEvent.date),
-        status: foundEvent.status as "upcoming" | "ongoing" | "completed" | "cancelled",
-        participantsList: [
-          { id: 1, name: foundEvent.organizer, status: "accepted" },
-          { id: 2, name: "Marie Dubois", status: "pending" },
-          { id: 3, name: "Pierre Martin", status: "accepted" },
-          { id: 4, name: "Sophie Bernard", status: "declined" },
-          { id: 5, name: "Antoine Leroy", status: "accepted" },
-          { id: 6, name: "Camille Rousseau", status: "pending" }
-        ],
-        budget: {
-          total: Math.floor(foundEvent.participants * 25),
-          spent: Math.floor(foundEvent.participants * 15),
-          remaining: Math.floor(foundEvent.participants * 10)
-        }
-      };
-      setEvent(enrichedEvent);
+  // Récupérer l'événement et ses données associées
+  const fetchEventData = async () => {
+    if (!id || !user?.id) {
+      setError('ID d\'événement ou utilisateur manquant');
+      setLoading(false);
+      return;
     }
-  }, [id]);
 
-  const getCategoryColor = (category: string): string => {
-    const cat = categoriesData.find(c => c.name.toLowerCase() === category?.toLowerCase());
-    return cat?.color || theme.primary;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const eventId = Number(id);
+      console.log('🔍 Récupération des données de l\'événement:', eventId);
+      
+      // Récupérer l'événement principal
+      const eventResponse = await eventService.getEventById(eventId);
+      if (!eventResponse.success || !eventResponse.data) {
+        throw new Error(eventResponse.error || 'Impossible de récupérer l\'événement');
+      }
+
+      // Récupérer les participants
+      const participantsResponse = await eventService.getEventParticipants(eventId);
+      const participants = participantsResponse.success ? participantsResponse.data?.participants || [] : [];
+
+      // Récupérer les tâches
+      const tasksResponse = await taskService.getTasksByEventId(eventId);
+      const tasks = tasksResponse.success ? tasksResponse.data || [] : [];
+
+      // Construire l'événement enrichi
+      const enrichedEvent: EnrichedEvent = {
+        ...eventResponse.data,
+        participants,
+        tasks
+      };
+
+      setEvent(enrichedEvent);
+      console.log('✅ Données de l\'événement récupérées:', enrichedEvent);
+      
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la récupération des données:', error);
+      setError(error.message || 'Erreur de connexion au serveur');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'upcoming': return { text: 'À venir', color: theme.primary, icon: 'time-outline' };
-      case 'ongoing': return { text: 'En cours', color: theme.warning, icon: 'play-circle-outline' };
-      case 'completed': return { text: 'Terminé', color: theme.success, icon: 'checkmark-circle-outline' };
-      case 'cancelled': return { text: 'Annulé', color: theme.error, icon: 'close-circle-outline' };
-      default: return { text: status, color: theme.textSecondary, icon: 'help-circle-outline' };
+  useEffect(() => {
+    fetchEventData();
+  }, [id, user?.id]);
+
+  const getStatusConfig = (startDate: string, endDate: string) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (now < start) {
+      return { text: 'À venir', color: theme.primary, icon: 'time-outline' };
+    } else if (now >= start && now <= end) {
+      return { text: 'En cours', color: theme.warning, icon: 'play-circle-outline' };
+    } else {
+      return { text: 'Terminé', color: theme.success, icon: 'checkmark-circle-outline' };
     }
   };
 
   const getParticipantStatusColor = (status: string): string => {
     switch (status) {
-      case 'accepted': return theme.success;
-      case 'pending': return theme.warning;
-      case 'declined': return theme.error;
+      case 'owner': return theme.primary;
+      case 'participant': return theme.success;
       default: return theme.textSecondary;
     }
   };
@@ -99,7 +113,7 @@ export default function EventDetailScreen() {
       route: `/events/${id}/tasks`, 
       color: '#3B82F6',
       description: 'Gérer les tâches à faire',
-      count: '3 en cours'
+             count: `${event?.tasks?.filter(t => !t.validated_by).length || 0} en cours`
     },
     { 
       title: 'Budget', 
@@ -107,7 +121,7 @@ export default function EventDetailScreen() {
       route: `/events/${id}/budget`, 
       color: '#10B981',
       description: 'Suivre les dépenses',
-      count: `${event?.budget.spent || 0}€ / ${event?.budget.total || 0}€`
+      count: 'Gérer le budget'
     },
     { 
       title: 'Chat', 
@@ -115,7 +129,7 @@ export default function EventDetailScreen() {
       route: `/events/${id}/chat`, 
       color: '#F59E0B',
       description: 'Discussion en temps réel',
-      count: '2 nouveaux messages'
+      count: 'Ouvrir le chat'
     },
   ];
 
@@ -125,18 +139,45 @@ export default function EventDetailScreen() {
     { title: 'Gérer', icon: 'settings-outline', route: `/events/${id}/manage`, color: '#6B7280' },
   ];
 
-  if (!event) {
+  // Affichage du chargement
+  if (loading) {
     return (
       <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
         <Header title="Événement" showBack />
         <View style={[layoutStyles.center, { flex: 1 }]}>
-          <Text variant="body" color="secondary">Chargement...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text variant="body" color="secondary" style={{ marginTop: 16 }}>
+            Chargement de l'événement...
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const statusConfig = getStatusConfig(event.status);
+  // Affichage de l'erreur
+  if (error || !event) {
+    return (
+      <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
+        <Header title="Événement" showBack />
+        <View style={[layoutStyles.center, { flex: 1, paddingHorizontal: 20 }]}>
+          <Ionicons name="alert-circle-outline" size={64} color={theme.error} />
+          <Text variant="h3" weight="semibold" style={{ color: theme.text, marginTop: 16, textAlign: 'center' }}>
+            Erreur de chargement
+          </Text>
+          <Text variant="body" color="secondary" style={{ marginTop: 8, textAlign: 'center', marginBottom: 24 }}>
+            {error || 'Impossible de charger l\'événement'}
+          </Text>
+          <Button 
+            title="Réessayer" 
+            onPress={fetchEventData}
+            variant="primary"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const statusConfig = getStatusConfig(event.start_date, event.end_date);
 
   return (
     <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
@@ -153,6 +194,9 @@ export default function EventDetailScreen() {
         style={layoutStyles.container}
         contentContainerStyle={{ paddingBottom: spacing[8] }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={fetchEventData} />
+        }
       >
         <View style={{ paddingHorizontal: spacing[5] }}>
           {/* Section Informations avec titre */}
@@ -171,8 +215,8 @@ export default function EventDetailScreen() {
           <Card variant="elevated" padding="medium" style={{ marginBottom: spacing[6] }}>
             <View style={[layoutStyles.rowBetween, { marginBottom: spacing[4] }]}>
               <Badge 
-                text={event.category || 'Événement'} 
-                color={getCategoryColor(event.category || '')}
+                text="Événement" 
+                color={theme.primary}
               />
               <View style={[layoutStyles.row, { alignItems: 'center' }]}>
                 <Ionicons name={statusConfig.icon as any} size={16} color={statusConfig.color} />
@@ -180,52 +224,47 @@ export default function EventDetailScreen() {
                   {statusConfig.text}
                 </Text>
               </View>
-
             </View>
-                      {/* Description */}
-          <Text variant="body" color="secondary" style={{ lineHeight: 22, marginBottom: spacing[4] }}>
-            {event.description}
-          </Text>
+
+            {/* Description */}
+            {event.description && (
+              <Text variant="body" color="secondary" style={{ lineHeight: 22, marginBottom: spacing[4] }}>
+                {event.description}
+              </Text>
+            )}
+
             <View style={[layoutStyles.gap4]}>
               <View style={[layoutStyles.rowBetween]}>
                 <View style={[layoutStyles.row, { alignItems: 'center' }]}>
                   <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
-                  <Text variant="body" style={{ marginLeft: spacing[2] }}>Date</Text>
+                  <Text variant="body" style={{ marginLeft: spacing[2] }}>Date de début</Text>
                 </View>
-                <Text variant="body" weight="semibold">
-                  {new Date(event.date).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </Text>
+                                 <Text variant="body" weight="semibold">
+                   {TaskService.formatDateTime(event.start_date)}
+                 </Text>
               </View>
 
               <View style={[layoutStyles.rowBetween]}>
                 <View style={[layoutStyles.row, { alignItems: 'center' }]}>
                   <Ionicons name="time-outline" size={20} color={theme.textSecondary} />
-                  <Text variant="body" style={{ marginLeft: spacing[2] }}>Heure</Text>
+                  <Text variant="body" style={{ marginLeft: spacing[2] }}>Date de fin</Text>
                 </View>
-                <Text variant="body" weight="semibold">{event.time}</Text>
+                                 <Text variant="body" weight="semibold">
+                   {TaskService.formatDateTime(event.end_date)}
+                 </Text>
               </View>
 
-              <View style={[layoutStyles.rowBetween]}>
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <Ionicons name="location-outline" size={20} color={theme.textSecondary} />
-                  <Text variant="body" style={{ marginLeft: spacing[2] }}>Lieu</Text>
+              {event.location && (
+                <View style={[layoutStyles.rowBetween]}>
+                  <View style={[layoutStyles.row, { alignItems: 'center' }]}>
+                    <Ionicons name="location-outline" size={20} color={theme.textSecondary} />
+                    <Text variant="body" style={{ marginLeft: spacing[2] }}>Lieu</Text>
+                  </View>
+                  <Text variant="body" weight="semibold" style={{ flex: 1, textAlign: 'right' }} numberOfLines={1}>
+                    {event.location}
+                  </Text>
                 </View>
-                <Text variant="body" weight="semibold" style={{ flex: 1, textAlign: 'right' }} numberOfLines={1}>
-                  {event.location}
-                </Text>
-              </View>
-
-              <View style={[layoutStyles.rowBetween]}>
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <Ionicons name="person-outline" size={20} color={theme.textSecondary} />
-                  <Text variant="body" style={{ marginLeft: spacing[2] }}>Organisateur</Text>
-                </View>
-                <Text variant="body" weight="semibold">{event.organizer}</Text>
-              </View>
+              )}
 
               <View style={[layoutStyles.rowBetween]}>
                 <View style={[layoutStyles.row, { alignItems: 'center' }]}>
@@ -233,13 +272,81 @@ export default function EventDetailScreen() {
                   <Text variant="body" style={{ marginLeft: spacing[2] }}>Participants</Text>
                 </View>
                 <Text variant="body" weight="semibold">
-                  {event.participants}/{event.maxParticipants}
+                  {event.participants?.length || 0}
                 </Text>
               </View>
             </View>
           </Card>
 
-          {/* Section Prochaines tâches - MODIFIÉE */}
+          {/* Section Participants */}
+          <View style={[layoutStyles.rowBetween, { marginBottom: spacing[4], alignItems: 'center' }]}>
+            <Text variant="h3" weight="semibold">
+              Participants
+            </Text>
+            <TouchableOpacity>
+              <Text variant="caption" color="primary">
+                Gérer
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Card variant="elevated" padding="medium" style={{ marginBottom: spacing[6] }}>
+            {event.participants && event.participants.length > 0 ? (
+              <View style={[layoutStyles.gap3]}>
+                {event.participants.slice(0, 5).map((participant, index) => (
+                  <View key={participant.user_id} style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
+                    <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
+                      <View style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: getParticipantStatusColor(participant.role) + '20',
+                        ...layoutStyles.center,
+                        marginRight: spacing[2]
+                      }}>
+                                                 <Ionicons 
+                           name={participant.role === 'owner' ? 'star' : 'person'} 
+                           size={16} 
+                           color={getParticipantStatusColor(participant.role)} 
+                         />
+                      </View>
+                      
+                      <View style={{ flex: 1 }}>
+                        <Text variant="body" weight="semibold">
+                          {participant.fname} {participant.lname}
+                        </Text>
+                        <Text variant="small" color="secondary">
+                          {participant.role === 'owner' ? 'Organisateur' : 'Participant'}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                                         <Badge 
+                       text={participant.role === 'owner' ? 'Propriétaire' : 'Participant'} 
+                       color={getParticipantStatusColor(participant.role)}
+                     />
+                  </View>
+                ))}
+                
+                {event.participants.length > 5 && (
+                  <TouchableOpacity style={{ alignItems: 'center', paddingTop: spacing[2] }}>
+                    <Text variant="small" color="primary">
+                      Voir tous les {event.participants.length} participants
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={[layoutStyles.center, { paddingVertical: spacing[4] }]}>
+                <Ionicons name="people-outline" size={32} color={theme.textSecondary} />
+                <Text variant="body" color="secondary" style={{ marginTop: spacing[2], textAlign: 'center' }}>
+                  Aucun participant pour le moment
+                </Text>
+              </View>
+            )}
+          </Card>
+
+          {/* Section Prochaines tâches */}
           <View style={[layoutStyles.rowBetween, { marginBottom: spacing[4], alignItems: 'center' }]}>
             <Text variant="h3" weight="semibold">
               Prochaines tâches
@@ -251,244 +358,80 @@ export default function EventDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Liste des 3 prochaines tâches */}
-          <View style={[layoutStyles.gap3, { marginBottom: spacing[8] }]}>
-            {/* Tâche 1 - Priorité haute */}
-            <TouchableOpacity onPress={() => router.push(`/events/${id}/tasks`)}>
-              <Card variant="elevated" padding="medium">
-                <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
-                  <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
-                    <View style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: theme.error + '15',
-                      ...layoutStyles.center,
-                      marginRight: spacing[3]
-                    }}>
-                      <Ionicons name="alert-circle-outline" size={20} color={theme.error} />
-                    </View>
-                    
-                    <View style={{ flex: 1 }}>
-                      <Text variant="body" weight="semibold" style={{ marginBottom: spacing[1] }}>
-                        Confirmer le traiteur
-                      </Text>
-                      <Text variant="small" color="secondary">
-                        À faire avant le {new Date(Date.parse(event.date) - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}
-                      </Text>
-                      <View style={[layoutStyles.row, { alignItems: 'center', marginTop: spacing[1] }]}>
-                        <View style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: theme.error,
-                          marginRight: spacing[1]
-                        }} />
-                        <Text variant="small" style={{ color: theme.error }}>
-                          Priorité haute
-                        </Text>
+          {/* Liste des tâches */}
+          {event.tasks && event.tasks.length > 0 ? (
+            <View style={[layoutStyles.gap3, { marginBottom: spacing[8] }]}>
+                             {event.tasks
+                 .filter(task => !task.validated_by)
+                 .slice(0, 3)
+                 .map(task => (
+                  <TouchableOpacity key={task.id} onPress={() => router.push(`/tasks/${task.id}`)}>
+                    <Card variant="elevated" padding="medium">
+                      <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
+                        <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
+                                                     <View style={{
+                             width: 40,
+                             height: 40,
+                             borderRadius: 20,
+                             backgroundColor: TaskService.getValidationColor(task.validated_by || null) + '15',
+                             ...layoutStyles.center,
+                             marginRight: spacing[3]
+                           }}>
+                             <Ionicons 
+                               name={TaskService.getValidationIcon(task.validated_by || null) as any} 
+                               size={20} 
+                               color={TaskService.getValidationColor(task.validated_by || null)} 
+                             />
+                           </View>
+                          
+                          <View style={{ flex: 1 }}>
+                            <Text variant="body" weight="semibold" style={{ marginBottom: spacing[1] }}>
+                              {task.title}
+                            </Text>
+                            {task.description && (
+                              <Text variant="small" color="secondary" numberOfLines={2}>
+                                {task.description}
+                              </Text>
+                            )}
+                            
+                            <View style={[layoutStyles.row, { alignItems: 'center', marginTop: spacing[1] }]}>
+                              <View style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: 3,
+                                                                 backgroundColor: TaskService.getValidationColor(task.validated_by || null),
+                                marginRight: spacing[1]
+                              }} />
+                                                             <Text variant="small" style={{ color: TaskService.getValidationColor(task.validated_by || null) }}>
+                                 {task.validated_by ? 'Validé' : 'Non validé'}
+                               </Text>
+                            </View>
+                          </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
                       </View>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-
-            {/* Tâche 2 - Priorité moyenne */}
-            <TouchableOpacity onPress={() => router.push(`/events/${id}/tasks`)}>
-              <Card variant="elevated" padding="medium">
-                <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
-                  <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
-                    <View style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: theme.warning + '15',
-                      ...layoutStyles.center,
-                      marginRight: spacing[3]
-                    }}>
-                      <Ionicons name="musical-notes-outline" size={20} color={theme.warning} />
-                    </View>
-                    
-                    <View style={{ flex: 1 }}>
-                      <Text variant="body" weight="semibold" style={{ marginBottom: spacing[1] }}>
-                        Réserver le DJ
-                      </Text>
-                      <Text variant="small" color="secondary">
-                        À faire avant le {new Date(Date.parse(event.date) - 14 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}
-                      </Text>
-                      <View style={[layoutStyles.row, { alignItems: 'center', marginTop: spacing[1] }]}>
-                        <View style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: theme.warning,
-                          marginRight: spacing[1]
-                        }} />
-                        <Text variant="small" style={{ color: theme.warning }}>
-                          Priorité moyenne
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-
-            {/* Tâche 3 - Priorité basse */}
-            <TouchableOpacity onPress={() => router.push(`/events/${id}/tasks`)}>
-              <Card variant="elevated" padding="medium">
-                <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
-                  <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
-                    <View style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: theme.success + '15',
-                      ...layoutStyles.center,
-                      marginRight: spacing[3]
-                    }}>
-                      <Ionicons name="camera-outline" size={20} color={theme.success} />
-                    </View>
-                    
-                    <View style={{ flex: 1 }}>
-                      <Text variant="body" weight="semibold" style={{ marginBottom: spacing[1] }}>
-                        Préparer les décorations
-                      </Text>
-                      <Text variant="small" color="secondary">
-                        À faire avant le {new Date(Date.parse(event.date) - 3 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}
-                      </Text>
-                      <View style={[layoutStyles.row, { alignItems: 'center', marginTop: spacing[1] }]}>
-                        <View style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: theme.success,
-                          marginRight: spacing[1]
-                        }} />
-                        <Text variant="small" style={{ color: theme.success }}>
-                          Priorité basse
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-          </View>
-
-          {/* Section Media - SIMPLIFIÉE */}
-          <View style={[layoutStyles.rowBetween, { marginBottom: spacing[4], alignItems: 'center' }]}>
-            <Text variant="h3" weight="semibold">
-              Médias
-            </Text>
-            <TouchableOpacity onPress={() => router.push(`/events/${id}/media`)}>
-              <Text variant="caption" color="primary">
-                Voir plus
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <Card variant="elevated" padding="medium" style={{ marginBottom: spacing[6] }}>
-            {/* Grid des 3 derniers médias */}
-            <View style={[layoutStyles.row, layoutStyles.gap3, { marginBottom: spacing[4] }]}>
-              <TouchableOpacity 
-                style={{ flex: 1 }}
-                onPress={() => router.push(`/events/${id}/media`)}
-              >
-                <View style={{
-                  aspectRatio: 1,
-                  borderRadius: 8,
-                  backgroundColor: theme.primaryLight,
-                  ...layoutStyles.center,
-                  overflow: 'hidden'
-                }}>
-                  <Ionicons name="image" size={32} color={theme.primary} />
-                </View>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={{ flex: 1 }}
-                onPress={() => router.push(`/events/${id}/media`)}
-              >
-                <View style={{
-                  aspectRatio: 1,
-                  borderRadius: 8,
-                  backgroundColor: theme.warning + '20',
-                  ...layoutStyles.center,
-                  overflow: 'hidden'
-                }}>
-                  <Ionicons name="videocam" size={32} color={theme.warning} />
-                </View>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={{ flex: 1 }}
-                onPress={() => router.push(`/events/${id}/media`)}
-              >
-                <View style={{
-                  aspectRatio: 1,
-                  borderRadius: 8,
-                  backgroundColor: theme.success + '20',
-                  ...layoutStyles.center,
-                  overflow: 'hidden'
-                }}>
-                  <Ionicons name="image" size={32} color={theme.success} />
-                </View>
-              </TouchableOpacity>
+                    </Card>
+                  </TouchableOpacity>
+                ))}
             </View>
-
-            {/* Stats photos et vidéos seulement */}
-            <View style={[layoutStyles.gap3]}>
-              <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <Ionicons name="images-outline" size={16} color={theme.textSecondary} />
-                  <Text variant="small" color="secondary" style={{ marginLeft: spacing[1] }}>
-                    8 photos
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push(`/events/${id}/media`)}>
-                  <Text variant="small" color="primary">Parcourir</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <Ionicons name="videocam-outline" size={16} color={theme.textSecondary} />
-                  <Text variant="small" color="secondary" style={{ marginLeft: spacing[1] }}>
-                    3 vidéos
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push(`/events/${id}/media`)}>
-                  <Text variant="small" color="primary">Regarder</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Bouton d'ajout de média - MODIFIÉ */}
-            <TouchableOpacity 
-              onPress={() => router.push('/modals/media-upload')}
-              style={{
-                marginTop: spacing[4],
-                paddingVertical: spacing[3],
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: theme.border,
-                borderStyle: 'dashed',
-                ...layoutStyles.center
-              }}
-            >
-              <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-                <Text variant="body" color="primary" style={{ marginLeft: spacing[2] }}>
-                  Ajouter des médias
+          ) : (
+            <Card variant="elevated" padding="medium" style={{ marginBottom: spacing[8] }}>
+              <View style={[layoutStyles.center, { paddingVertical: spacing[4] }]}>
+                <Ionicons name="checkbox-outline" size={32} color={theme.textSecondary} />
+                <Text variant="body" color="secondary" style={{ marginTop: spacing[2], textAlign: 'center' }}>
+                  Aucune tâche pour le moment
                 </Text>
+                <TouchableOpacity 
+                  style={{ marginTop: spacing[3] }}
+                  onPress={() => router.push(`/events/${id}/tasks`)}
+                >
+                  <Text variant="small" color="primary">
+                    Créer une première tâche
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </Card>
+            </Card>
+          )}
 
           {/* Section Gestion - actions restantes intégrées */}
           <View style={[layoutStyles.rowBetween, { marginBottom: spacing[4], alignItems: 'center' }]}>

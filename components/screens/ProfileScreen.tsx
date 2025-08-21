@@ -130,7 +130,6 @@ export default function ProfileScreen() {
               <View style={[layoutStyles.row, { alignItems: 'center', marginBottom: spacing[5] }]}>
                 <Avatar
                   size="xlarge"
-                  source={user?.avatar ? { uri: user.avatar } : undefined}
                   fallbackIcon="person"
                   style={{ marginRight: spacing[5] }}
                 />

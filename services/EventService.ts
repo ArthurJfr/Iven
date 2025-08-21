@@ -140,6 +140,132 @@ class EventService {
   }
 
   /**
+   * Mettre à jour un événement
+   */
+  async updateEvent(eventId: number, eventData: Partial<CreateEventRequest>): Promise<ApiResponse<Event>> {
+    try {
+      console.info(`📝 Mise à jour de l'événement ${eventId}:`, eventData);
+      
+      const response = await apiService.put<Event>(`${this.BASE_URL}/${eventId}`, eventData);
+      
+      if (response.success) {
+        console.info('✅ Événement mis à jour avec succès');
+      } else {
+        console.error('❌ Échec de la mise à jour de l\'événement:', response.error);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la mise à jour de l\'événement:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la mise à jour de l\'événement'
+      };
+    }
+  }
+
+  /**
+   * Supprimer un événement
+   */
+  async deleteEvent(eventId: number): Promise<ApiResponse<{ message: string; eventId: number }>> {
+    try {
+      console.info(`🗑️ Suppression de l'événement ${eventId}`);
+      
+      const response = await apiService.delete<{ message: string; eventId: number }>(`${this.BASE_URL}/${eventId}`);
+      
+      if (response.success) {
+        console.info('✅ Événement supprimé avec succès');
+      } else {
+        console.error('❌ Échec de la suppression de l\'événement:', response.error);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la suppression de l\'événement:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la suppression de l\'événement'
+      };
+    }
+  }
+
+  /**
+   * Récupérer les participants d'un événement
+   */
+  async getEventParticipants(eventId: number): Promise<ApiResponse<any>> {
+    try {
+      console.info(`👥 Récupération des participants de l'événement ${eventId}`);
+      
+      const response = await apiService.get<any>(`${this.BASE_URL}/${eventId}/participants`);
+      
+      if (response.success) {
+        console.info(`✅ ${response.data?.participants?.length || 0} participants récupérés`);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la récupération des participants:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la récupération des participants'
+      };
+    }
+  }
+
+  /**
+   * Ajouter un participant à un événement
+   */
+  async addParticipant(eventId: number, userId: number, role: 'owner' | 'participant' = 'participant'): Promise<ApiResponse<any>> {
+    try {
+      console.info(`➕ Ajout du participant ${userId} à l'événement ${eventId} avec le rôle ${role}`);
+      
+      const response = await apiService.post<any>(`${this.BASE_URL}/${eventId}/participants`, {
+        userId,
+        role
+      });
+      
+      if (response.success) {
+        console.info('✅ Participant ajouté avec succès');
+      } else {
+        console.error('❌ Échec de l\'ajout du participant:', response.error);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de l\'ajout du participant:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de l\'ajout du participant'
+      };
+    }
+  }
+
+  /**
+   * Retirer un participant d'un événement
+   */
+  async removeParticipant(eventId: number, userId: number): Promise<ApiResponse<any>> {
+    try {
+      console.info(`➖ Retrait du participant ${userId} de l'événement ${eventId}`);
+      
+      const response = await apiService.delete<any>(`${this.BASE_URL}/${eventId}/participants/${userId}`);
+      
+      if (response.success) {
+        console.info('✅ Participant retiré avec succès');
+      } else {
+        console.error('❌ Échec du retrait du participant:', response.error);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors du retrait du participant:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors du retrait du participant'
+      };
+    }
+  }
+
+  /**
    * Valider les données d'un événement avant envoi
    */
   private validateEventData(eventData: CreateEventRequest): boolean {
