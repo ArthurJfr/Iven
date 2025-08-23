@@ -50,7 +50,6 @@ const routes: Route[] = [
   { name: 'Éditer Profil', path: '/modals/edit-profile', group: 'Modales', icon: 'create-outline', description: 'Modal édition profil' },
   { name: 'Visualiseur Média', path: '/modals/media-viewer', group: 'Modales', icon: 'expand-outline', description: 'Modal visualiseur' },
   { name: 'Inviter Participants', path: '/modals/invite-participants', group: 'Modales', icon: 'person-add-outline', description: 'Modal invitation' },
-  { name: 'Détail Tâche', path: '/modals/task-detail', group: 'Modales', icon: 'document-outline', description: 'Modal tâche' },
   { name: 'Formulaire Dépense', path: '/modals/expense-form', group: 'Modales', icon: 'receipt-outline', description: 'Modal dépense' },
   
   // Special

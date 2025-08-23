@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -23,6 +23,7 @@ export default function TasksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('Toutes');
+  const [fadeAnim] = useState(new Animated.Value(0));
 
   // Récupérer les tâches de l'utilisateur connecté
   const fetchUserTasks = async () => {
@@ -44,6 +45,13 @@ export default function TasksScreen() {
       if (response.success && response.data) {
         console.log('✅ Tâches récupérées:', response.data);
         setTasks(response.data);
+        
+        // Animation d'apparition
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
       } else {
         console.error('❌ Erreur lors de la récupération des tâches:', response.error);
         setError(response.error || 'Impossible de récupérer les tâches');
@@ -99,8 +107,15 @@ export default function TasksScreen() {
     return (
       <ProtectedRoute requireAuth={true}>
         <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={{ marginTop: 16, color: theme.textSecondary }}>Chargement des tâches...</Text>
+          <View style={{ alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={{ marginTop: spacing[4], color: theme.textSecondary, fontSize: 16 }}>
+              Chargement des tâches...
+            </Text>
+            <Text style={{ marginTop: spacing[2], color: theme.textTertiary, fontSize: 14 }}>
+              Récupération de vos tâches en cours
+            </Text>
+          </View>
         </View>
       </ProtectedRoute>
     );
@@ -113,30 +128,54 @@ export default function TasksScreen() {
         <View style={{ flex: 1, backgroundColor: theme.background }}>
           <Header
             title="Mes Tâches"
-            rightAction={{
-              icon: "add-circle",
-              onPress: () => router.push('/modals/task-detail')
-            }}
           />
           
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-            <Ionicons name="alert-circle-outline" size={64} color={theme.error} />
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginTop: 16, textAlign: 'center' }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[5] }}>
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: theme.error + '15',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: spacing[4]
+            }}>
+              <Ionicons name="alert-circle-outline" size={40} color={theme.error} />
+            </View>
+            
+            <Text style={{ 
+              fontSize: 20, 
+              fontWeight: 'bold', 
+              color: theme.text, 
+              marginBottom: spacing[2], 
+              textAlign: 'center' 
+            }}>
               Erreur de chargement
             </Text>
-            <Text style={{ color: theme.textSecondary, marginTop: 8, textAlign: 'center', marginBottom: 24 }}>
+            
+            <Text style={{ 
+              color: theme.textSecondary, 
+              marginBottom: spacing[6], 
+              textAlign: 'center',
+              lineHeight: 22,
+              paddingHorizontal: spacing[4]
+            }}>
               {error}
             </Text>
+            
             <TouchableOpacity
               style={{
                 backgroundColor: theme.primary,
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                borderRadius: 8
+                paddingHorizontal: spacing[5],
+                paddingVertical: spacing[3],
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center'
               }}
               onPress={fetchUserTasks}
             >
-              <Text style={{ color: 'white', fontWeight: '600' }}>Réessayer</Text>
+              <Ionicons name="refresh" size={20} color="white" style={{ marginRight: spacing[2] }} />
+              <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>Réessayer</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -150,86 +189,160 @@ export default function TasksScreen() {
         {/* Header */}
         <Header
           title="Mes Tâches"
-          rightAction={{
-            icon: "add-circle",
-            onPress: () => router.push('/modals/task-detail')
-          }}
         />
 
         {/* Filtres */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            {['Toutes', 'À faire', 'En cours', 'Terminées'].map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 20,
-                  backgroundColor: activeFilter === filter ? theme.primary : theme.border,
-                }}
-                onPress={() => setActiveFilter(filter)}
-              >
-                <Text style={{ 
-                  color: activeFilter === filter ? 'white' : theme.text,
-                  fontWeight: activeFilter === filter ? '600' : '400'
+        <View style={{ paddingHorizontal: spacing[5], marginBottom: spacing[3] }}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={{ paddingRight: spacing[5] }}
+            style={{ height: 32 }}
+          >
+          {[
+            { key: 'Toutes', icon: 'list', count: tasks.length },
+            { key: 'À faire', icon: 'time', count: tasks.filter(t => !t.validated_by).length },
+            { key: 'En cours', icon: 'play', count: tasks.filter(t => !t.validated_by).length },
+            { key: 'Terminées', icon: 'checkmark-circle', count: tasks.filter(t => t.validated_by).length }
+          ].map((filter) => (
+            <TouchableOpacity
+              key={filter.key}
+              style={{
+                paddingHorizontal: spacing[3],
+                paddingVertical: 6,
+                borderRadius: 16,
+                backgroundColor: activeFilter === filter.key ? theme.primary : theme.backgroundSecondary,
+                marginRight: spacing[3],
+                flexDirection: 'row',
+                alignItems: 'center',
+                minWidth: 70,
+                justifyContent: 'center',
+                height: 32
+              }}
+              onPress={() => setActiveFilter(filter.key)}
+            >
+              <Ionicons 
+                name={filter.icon as any} 
+                size={14} 
+                color={activeFilter === filter.key ? 'white' : theme.textSecondary}
+                style={{ marginRight: spacing[1] }}
+              />
+              <Text style={{ 
+                color: activeFilter === filter.key ? 'white' : theme.text,
+                fontWeight: activeFilter === filter.key ? '600' : '500',
+                fontSize: 13
+              }}>
+                {filter.key}
+              </Text>
+              <View style={{
+                backgroundColor: activeFilter === filter.key ? 'rgba(255,255,255,0.2)' : theme.border,
+                paddingHorizontal: spacing[1],
+                paddingVertical: 1,
+                borderRadius: 8,
+                marginLeft: spacing[1]
+              }}>
+                <Text style={{
+                  color: activeFilter === filter.key ? 'white' : theme.textSecondary,
+                  fontSize: 11,
+                  fontWeight: '600'
                 }}>
-                  {filter}
+                  {filter.count}
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+              </View>
+            </TouchableOpacity>
+          ))}
+          </ScrollView>
+        </View>
 
         {/* Liste des tâches */}
         <ScrollView 
-          style={{ flex: 1, paddingHorizontal: 20 }}
+          style={{ flex: 1, paddingHorizontal: spacing[5] }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         >
           {filteredTasks.length > 0 ? (
-            filteredTasks.map(task => (
+            filteredTasks.map((task, index) => (
               <TouchableOpacity
                 key={task.id}
                 style={{
-                  marginBottom: 12,
+                  marginBottom: spacing[3],
                 }}
                 onPress={() => router.push(`/tasks/${task.id}`)}
+                activeOpacity={0.7}
               >
                 <Card variant="elevated" padding="medium">
-                                          <View style={{
-                          borderLeftWidth: 4,
-                          borderLeftColor: getValidationColor(task.validated_by || null),
-                        }}>
-                    <View style={{ paddingLeft: 16 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                        <Text style={{ 
-                          fontSize: 16, 
-                          fontWeight: '600', 
-                          color: theme.text,
-                          flex: 1,
-                          marginRight: 12
-                        }}>
-                          {task.title}
-                        </Text>
-                                                  <Badge 
-                            text={task.validated_by ? 'Validé' : 'Non validé'} 
-                            color={getValidationColor(task.validated_by || null)}
-                          />
+                  <View style={{
+                    borderLeftWidth: 4,
+                    borderLeftColor: getValidationColor(task.validated_by || null),
+                    borderRadius: 2
+                  }}>
+                    <View style={{ paddingLeft: spacing[4] }}>
+                      {/* Header de la tâche */}
+                      <View style={{ 
+                        flexDirection: 'row', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'flex-start', 
+                        marginBottom: spacing[2] 
+                      }}>
+                        <View style={{ flex: 1, marginRight: spacing[3] }}>
+                          <Text style={{ 
+                            fontSize: 16, 
+                            fontWeight: '600', 
+                            color: theme.text,
+                            marginBottom: spacing[1],
+                            lineHeight: 22
+                          }}>
+                            {task.title}
+                          </Text>
+                          
+                                                     {/* Métadonnées de la tâche */}
+                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
+                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                               <View style={{
+                                 width: 8,
+                                 height: 8,
+                                 borderRadius: 4,
+                                 backgroundColor: getValidationColor(task.validated_by || null),
+                                 marginRight: spacing[1]
+                               }} />
+                               <Text style={{ 
+                                 color: theme.textSecondary, 
+                                 fontSize: 12
+                               }}>
+                                 {task.validated_by ? 'Validé' : 'En attente'}
+                               </Text>
+                             </View>
+                           </View>
+                        </View>
+                        
+                        <Badge 
+                          text={task.validated_by ? 'Validé' : 'Non validé'} 
+                          color={getValidationColor(task.validated_by || null)}
+                        />
                       </View>
                       
+                      {/* Description */}
                       {task.description && (
                         <Text style={{ 
                           color: theme.textSecondary, 
-                          marginBottom: 8,
-                          lineHeight: 20
+                          marginBottom: spacing[3],
+                          lineHeight: 20,
+                          fontSize: 14
                         }}>
                           {task.description}
                         </Text>
                       )}
                       
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {/* Footer de la tâche */}
+                      <View style={{ 
+                        flexDirection: 'row', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        paddingTop: spacing[2],
+                        borderTopWidth: 1,
+                        borderTopColor: theme.border
+                      }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <Ionicons 
                             name={getValidationIcon(task.validated_by || null) as any} 
@@ -238,14 +351,22 @@ export default function TasksScreen() {
                           />
                           <Text style={{ 
                             color: theme.textSecondary, 
-                            marginLeft: 6,
-                            fontSize: 14
+                            marginLeft: spacing[1],
+                            fontSize: 13
                           }}>
                             {task.validated_by ? 'Validé' : 'Non validé'}
                           </Text>
                         </View>
                         
-
+                                                 {/* Date de création si disponible */}
+                         {task.created_at && (
+                           <Text style={{ 
+                             color: theme.textTertiary, 
+                             fontSize: 12 
+                           }}>
+                             Créée le {new Date(task.created_at).toLocaleDateString('fr-FR')}
+                           </Text>
+                         )}
                       </View>
                     </View>
                   </View>
@@ -257,28 +378,61 @@ export default function TasksScreen() {
               flex: 1, 
               justifyContent: 'center', 
               alignItems: 'center', 
-              paddingVertical: 60 
+              paddingVertical: spacing[8],
+              paddingHorizontal: spacing[4]
             }}>
-              <Ionicons name="checkbox-outline" size={64} color={theme.textSecondary} />
+              <View style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: theme.backgroundSecondary,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: spacing[4]
+              }}>
+                <Ionicons name="checkbox-outline" size={40} color={theme.textSecondary} />
+              </View>
+              
               <Text style={{ 
                 fontSize: 18, 
                 fontWeight: '600', 
                 color: theme.text, 
-                marginTop: 16, 
+                marginBottom: spacing[2], 
                 textAlign: 'center' 
               }}>
                 {activeFilter === 'Toutes' ? 'Aucune tâche' : `Aucune tâche ${activeFilter.toLowerCase()}`}
               </Text>
+              
               <Text style={{ 
                 color: theme.textSecondary, 
-                marginTop: 8, 
-                textAlign: 'center' 
+                marginBottom: spacing[6], 
+                textAlign: 'center',
+                lineHeight: 22
               }}>
                 {activeFilter === 'Toutes' 
-                  ? 'Créez votre première tâche pour commencer' 
+                  ? 'Créez votre première tâche pour commencer à organiser votre travail' 
                   : `Toutes les tâches sont dans d'autres catégories`
                 }
               </Text>
+              
+              {activeFilter === 'Toutes' && (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: theme.primary,
+                    paddingHorizontal: spacing[5],
+                    paddingVertical: spacing[3],
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                  }}
+                //  onPress={() => router.push('/modals/create-task')}
+                >
+                  <Ionicons name="add" size={20} color="white" style={{ marginRight: spacing[2] }} />
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>
+                    Créer une tâche
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </ScrollView>

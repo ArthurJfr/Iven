@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import { authService } from "../../services/AuthService";
 import AccountActivationBanner from "../../components/ui/AccountActivationBanner";
 import { useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function TestAuthScreen() {
   const { theme } = useTheme();
@@ -23,28 +24,25 @@ export default function TestAuthScreen() {
       let testCredentials;
       
       switch (scenario) {
-        case 'valid_confirmed':
-          testCredentials = {
-            email: 'user@confirmed.com',
-            password: 'password123',
-            rememberMe: false
-          };
+                 case 'valid_confirmed':
+           testCredentials = {
+             email: 'user@confirmed.com',
+             password: 'password123'
+           };
+           break;
+           
+         case 'valid_not_confirmed':
+           testCredentials = {
+             email: 'user@notconfirmed.com',
+             password: 'password123'
+           };
           break;
           
-        case 'valid_not_confirmed':
-          testCredentials = {
-            email: 'user@notconfirmed.com',
-            password: 'password123',
-            rememberMe: false
-          };
-          break;
-          
-        case 'invalid_credentials':
-          testCredentials = {
-            email: 'wrong@email.com',
-            password: 'wrongpassword',
-            rememberMe: false
-          };
+                 case 'invalid_credentials':
+           testCredentials = {
+             email: 'wrong@email.com',
+             password: 'wrongpassword'
+           };
           break;
           
         default:
@@ -57,13 +55,13 @@ export default function TestAuthScreen() {
       // Pour l'instant, c'est pour tester l'interface et les logs
       const response = await authService.login(testCredentials);
       
-      if (response.success) {
-        if (response.data?.user.isConfirmed) {
-          setLastResponse(`✅ ${scenario}: Connexion réussie, compte confirmé`);
-        } else {
-          setLastResponse(`⚠️ ${scenario}: Connexion réussie, compte NON confirmé`);
-        }
-      } else {
+             if (response.success) {
+         if (response.data?.user.active === 1) {
+           setLastResponse(`✅ ${scenario}: Connexion réussie, compte confirmé`);
+         } else {
+           setLastResponse(`⚠️ ${scenario}: Connexion réussie, compte NON confirmé`);
+         }
+       } else {
         setLastResponse(`❌ ${scenario}: ${response.error}`);
       }
       
@@ -256,6 +254,56 @@ export default function TestAuthScreen() {
           variant="outline"
           style={styles.button}
         />
+        
+        <Button
+          title="💾 Vérifier stockage local"
+          onPress={async () => {
+            try {
+              const keys = await AsyncStorage.getAllKeys();
+              const authKeys = keys.filter(key => key.startsWith('@iven_'));
+              
+              let storageInfo = `Clés trouvées: ${authKeys.join(', ')}\n\n`;
+              
+              for (const key of authKeys) {
+                const value = await AsyncStorage.getItem(key);
+                if (key === '@iven_user_data' && value) {
+                  try {
+                    const userData = JSON.parse(value);
+                    storageInfo += `📱 ${key}:\n`;
+                    storageInfo += `  - fname: "${userData.fname || 'undefined'}"\n`;
+                    storageInfo += `  - lname: "${userData.lname || 'undefined'}"\n`;
+                    storageInfo += `  - email: "${userData.email || 'undefined'}"\n`;
+                    storageInfo += `  - Champs: ${Object.keys(userData).join(', ')}\n`;
+                  } catch (parseError) {
+                    storageInfo += `📱 ${key}: Erreur parsing\n`;
+                  }
+                } else {
+                  storageInfo += `🔑 ${key}: ${value ? value.substring(0, 50) + '...' : 'null'}\n`;
+                }
+              }
+              
+              setLastResponse(`💾 Contenu du stockage:\n${storageInfo}`);
+            } catch (error) {
+              setLastResponse(`❌ Erreur lecture stockage: ${error}`);
+            }
+          }}
+          variant="outline"
+          style={styles.button}
+        />
+        
+        <Button
+          title="🔄 Synchroniser stockage"
+          onPress={async () => {
+            try {
+              const success = await authService.syncLocalStorage();
+              setLastResponse(success ? "✅ Stockage synchronisé" : "❌ Échec synchronisation");
+            } catch (error) {
+              setLastResponse(`❌ Erreur synchronisation: ${error}`);
+            }
+          }}
+          variant="outline"
+          style={styles.button}
+        />
       </View>
 
       {/* Informations sur l'état */}
@@ -282,7 +330,6 @@ export default function TestAuthScreen() {
     </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     padding: spacing[5],

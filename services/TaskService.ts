@@ -238,6 +238,79 @@ class TaskService {
   static getValidationText(validatedBy: number | null): string {
     return validatedBy ? 'Validée' : 'En attente';
   }
+
+  /**
+   * Valider une tâche
+   */
+  async validateTask(taskId: number): Promise<ApiResponse<Task>> {
+    try {
+      console.info(`✅ Validation de la tâche ${taskId}`);
+      
+      const response = await apiService.post<Task>(`${this.BASE_URL}/${taskId}/validate`);
+      
+      if (response.success) {
+        console.info('✅ Tâche validée avec succès');
+      } else {
+        console.error('❌ Échec de la validation de la tâche:', response.error);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la validation de la tâche:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la validation de la tâche'
+      };
+    }
+  }
+
+  /**
+   * Annuler la validation d'une tâche
+   */
+  async unvalidateTask(taskId: number): Promise<ApiResponse<Task>> {
+    try {
+      console.info(`❌ Annulation de la validation de la tâche ${taskId}`);
+      
+      const response = await apiService.delete<Task>(`${this.BASE_URL}/${taskId}/validate`);
+      
+      if (response.success) {
+        console.info('✅ Validation de la tâche annulée avec succès');
+      } else {
+        console.error('❌ Échec de l\'annulation de la validation:', response.error);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de l\'annulation de la validation:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de l\'annulation de la validation'
+      };
+    }
+  }
+
+  /**
+   * Récupérer les tâches validées par un utilisateur
+   */
+  async getTasksValidatedByUser(userId: number): Promise<ApiResponse<{ tasks: Task[], count: number }>> {
+    try {
+      console.info(`📋 Récupération des tâches validées par l'utilisateur ${userId}`);
+      
+      const response = await apiService.get<{ tasks: Task[], count: number }>(`${this.BASE_URL}/validated-by/${userId}`);
+      
+      if (response.success) {
+        console.info(`✅ ${response.data?.count || 0} tâches validées récupérées`);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la récupération des tâches validées:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la récupération des tâches validées'
+      };
+    }
+  }
 }
 
 // Instance singleton

@@ -8,7 +8,9 @@ export interface Event {
   end_date: string; // DATETIME NOT NULL (format: "YYYY-MM-DD HH:MM:SS")
   location?: string; // VARCHAR(255)
   created_at: string; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  updated_at: string; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at: string;
+  participants: EventParticipantWithDetails[];
+ // TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
 
 // Table de liaison event_participants

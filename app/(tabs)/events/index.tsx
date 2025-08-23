@@ -193,7 +193,7 @@ export default function EventsListScreen() {
                   paddingVertical: 4,
                   borderRadius: 12,
                 }}>
-                  <Text style={{ color: '#FFF', fontSize: 12 }}>{event.status || 'upcoming'}</Text>
+                <Text style={{ color: '#FFF', fontSize: 12 }}>{event.participants.length || 'upcoming'}</Text>
                 </View>
               </View>
               
@@ -206,7 +206,7 @@ export default function EventsListScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
                 <Text style={{ color: theme.textSecondary, marginLeft: 8 }}>
-                  {event.startDate ? new Date(event.startDate).toLocaleDateString('fr-FR') : 'Date non définie'}
+                  {event.start_date ? new Date(event.start_date).toLocaleDateString('fr-FR') : 'Date non définie'}
                 </Text>
               </View>
               

@@ -41,15 +41,82 @@ class AuthService {
         return false;
       }
 
+      // Récupérer les données utilisateur stockées localement en premier
+      const storedUserData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
+      let localUser: User | null = null;
+      
+      if (storedUserData) {
+        try {
+          localUser = JSON.parse(storedUserData);
+          if (localUser) {
+            console.info('📱 Données utilisateur locales récupérées:', localUser.email);
+          }
+        } catch (parseError) {
+          console.warn('⚠️ Erreur parsing données utilisateur locales:', parseError);
+        }
+      }
+
       // Vérifier la validité du token avec l'API
       console.info('🔐 Vérification du token JWT...');
       const verificationResult = await this.verifyToken(token);
       
       if (verificationResult.success && verificationResult.data?.isConnected) {
-        // Token valide - restaurer la session
+        // Token valide - restaurer la session avec les données de l'API
         this.authToken = token;
-        this.currentUser = verificationResult.data.user!;
+        
+        // Vérifier si l'API retourne tous les champs nécessaires
+        const apiUser = verificationResult.data.user!;
+        const hasAllRequiredFields = apiUser.fname && apiUser.lname && apiUser.active !== undefined;
+        
+        if (hasAllRequiredFields) {
+          // L'API retourne tous les champs - utiliser directement
+          this.currentUser = apiUser;
+          console.info('✅ API retourne tous les champs nécessaires');
+        } else {
+          // L'API ne retourne pas tous les champs - fusionner avec les données locales
+          console.warn('⚠️ API ne retourne pas tous les champs, fusion avec données locales...');
+          
+          if (localUser) {
+            // Fusionner : API en priorité, données locales en complément
+            this.currentUser = {
+              ...localUser,           // Données locales (incluant fname, lname, active)
+              ...apiUser,             // Données API (id, username, email)
+              updated_at: new Date().toISOString() // Marquer comme mis à jour
+            };
+            console.info('✅ Données fusionnées API + locales');
+          } else {
+            // Pas de données locales - utiliser l'API même incomplète
+            this.currentUser = apiUser;
+            console.warn('⚠️ Utilisation des données API incomplètes (pas de données locales)');
+          }
+        }
+        
         apiService.setAuthToken(token);
+        
+        // Log de débogage pour voir les données finales
+        console.log('🔍 Données utilisateur finales après fusion:', {
+          id: this.currentUser.id,
+          email: this.currentUser.email,
+          username: this.currentUser.username,
+          fname: this.currentUser.fname,
+          lname: this.currentUser.lname,
+          active: this.currentUser.active,
+          source: hasAllRequiredFields ? 'API complète' : 'Fusion API+locales'
+        });
+        
+        // IMPORTANT: Synchroniser le stockage local avec les données finales
+        try {
+          const updatedAuthData = {
+            token,
+            user: this.currentUser,
+            expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+          };
+          await this.persistAuthData(updatedAuthData);
+          console.info('💾 Stockage local synchronisé avec les données finales');
+        } catch (syncError) {
+          console.warn('⚠️ Erreur synchronisation stockage local:', syncError);
+          // Continuer même si la synchronisation échoue
+        }
         
         console.info('✅ Token JWT valide, session restaurée');
         return true;
@@ -62,6 +129,25 @@ class AuthService {
       
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation de l\'auth:', error);
+      
+      // En cas d'erreur réseau, essayer de restaurer avec les données locales
+      try {
+        const storedUserData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
+        const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
+        
+        if (storedUserData && token) {
+          const localUser = JSON.parse(storedUserData);
+          this.currentUser = localUser;
+          this.authToken = token;
+          apiService.setAuthToken(token);
+          
+          console.info('📱 Session restaurée depuis le stockage local (erreur réseau)');
+          return true;
+        }
+      } catch (fallbackError) {
+        console.warn('⚠️ Échec de la restauration depuis le stockage local:', fallbackError);
+      }
+      
       await this.clearStoredAuth();
       return false;
     }
@@ -123,12 +209,33 @@ class AuthService {
       return false;
     }
 
+    // Log de débogage pour voir les données reçues
+    console.log('🔍 Validation des données utilisateur:', {
+      id: authData.user.id,
+      email: authData.user.email,
+      username: authData.user.username,
+      fname: authData.user.fname,
+      lname: authData.user.lname,
+      fnameType: typeof authData.user.fname,
+      lnameType: typeof authData.user.lname
+    });
+
     // Vérification des champs obligatoires de l'utilisateur
     const requiredFields = ['id', 'email', 'username', 'fname', 'lname'];
     for (const field of requiredFields) {
-      if (!authData.user[field as keyof User]) {
-        console.warn(`⚠️ Champ utilisateur manquant ou invalide: ${field}`);
+      const value = authData.user[field as keyof User];
+      // Accepter les chaînes vides comme valeurs valides
+      if (value === undefined || value === null) {
+        console.warn(`⚠️ Champ utilisateur manquant: ${field}`);
         return false;
+      }
+      // Vérifier que la valeur n'est pas undefined ou null, mais accepter les chaînes vides
+      if (typeof value === 'string' && value.trim() === '') {
+        console.info(`ℹ️ Champ ${field} est une chaîne vide (valide)`);
+      } else if (typeof value === 'number' && value === 0) {
+        console.info(`ℹ️ Champ ${field} est 0 (valide)`);
+      } else if (value) {
+        console.info(`✅ Champ ${field} valide: ${value}`);
       }
     }
 
@@ -146,6 +253,7 @@ class AuthService {
       }
     }
 
+    console.log('✅ Validation des données d\'authentification réussie');
     return true;
   }
 
@@ -530,6 +638,68 @@ class AuthService {
         success: false,
         error: error.message || 'Erreur lors du renvoi du code'
       };
+    }
+  }
+
+  /**
+   * Synchroniser le stockage local avec les données utilisateur actuelles
+   */
+  async syncLocalStorage(): Promise<boolean> {
+    try {
+      if (!this.currentUser || !this.authToken) {
+        console.warn('⚠️ Impossible de synchroniser: utilisateur ou token manquant');
+        return false;
+      }
+
+      const authData = {
+        token: this.authToken,
+        user: this.currentUser,
+        expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+      };
+
+      await this.persistAuthData(authData);
+      console.info('💾 Stockage local synchronisé avec succès');
+      return true;
+    } catch (error) {
+      console.error('❌ Erreur synchronisation stockage local:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Restaurer la session depuis le stockage local (fallback)
+   */
+  async restoreFromLocalStorage(): Promise<boolean> {
+    try {
+      console.info('📱 Tentative de restauration depuis le stockage local...');
+      
+      const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
+      const storedUserData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
+      
+      if (!token || !storedUserData) {
+        console.info('ℹ️ Aucune donnée locale disponible pour la restauration');
+        return false;
+      }
+      
+      const localUser = JSON.parse(storedUserData);
+      
+      // Vérifier que les données utilisateur sont valides
+      if (!localUser || !localUser.email || !localUser.fname || !localUser.lname) {
+        console.warn('⚠️ Données utilisateur locales incomplètes');
+        return false;
+      }
+      
+      // Restaurer la session
+      this.currentUser = localUser;
+      this.authToken = token;
+      apiService.setAuthToken(token);
+      
+      console.info('✅ Session restaurée depuis le stockage local:', localUser.email);
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la restauration locale:', error);
+      return false;
     }
   }
 

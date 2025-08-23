@@ -1,89 +1,80 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../../../../components/ui/Card';
-import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
 import { useTheme } from '../../../../contexts/ThemeContext';
+import { createThemedStyles, spacing } from '../../../../styles';
+import { Task } from '../../../../types/tasks';
+import { taskService } from '../../../../services/TaskService';
+import Badge from '../../../../components/ui/atoms/Badge';
+import Header from '../../../../components/ui/organisms/Header';
+import ProtectedRoute from '../../../../components/ProtectedRoute';
 
-const { width } = Dimensions.get('window');
 
-interface Task {
-  id: number;
-  title: string;
-  description?: string;
-  completed: boolean;
-  assignedTo?: string;
-  dueDate?: string;
-  priority: 'low' | 'medium' | 'high';
-}
 
 export default function EventTasksScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { theme } = useTheme();
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      title: "Acheter le gâteau",
-      description: "Gâteau d'anniversaire au chocolat",
-      completed: false,
-      assignedTo: "Marie",
-      dueDate: "2024-03-14",
-      priority: 'high'
-    },
-    {
-      id: 2,
-      title: "Décorer la salle",
-      description: "Ballons et guirlandes",
-      completed: true,
-      assignedTo: "Jean",
-      dueDate: "2024-03-15",
-      priority: 'medium'
-    },
-    {
-      id: 3,
-      title: "Préparer la playlist",
-      description: "Musique pour la soirée",
-      completed: false,
-      assignedTo: "Sophie",
-      dueDate: "2024-03-14",
-      priority: 'low'
-    }
-  ]);
+  const themedStyles = createThemedStyles(theme);
+  
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
 
-  const toggleTask = (taskId: number) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
-  };
-
-  const addTask = () => {
-    if (!newTaskTitle.trim()) {
-      Alert.alert('Erreur', 'Le titre de la tâche est requis');
+  // Récupérer les tâches de l'événement
+  const fetchEventTasks = async () => {
+    if (!id) {
+      setError('ID de l\'événement manquant');
+      setLoading(false);
       return;
     }
 
-    const newTask: Task = {
-      id: Date.now(),
-      title: newTaskTitle,
-      description: newTaskDescription,
-      completed: false,
-      priority: 'medium'
-    };
-
-    setTasks([...tasks, newTask]);
-    setNewTaskTitle('');
-    setNewTaskDescription('');
-    setShowAddForm(false);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('📋 Récupération des tâches pour l\'événement:', id);
+      
+      // Appel à l'API pour récupérer les tâches de l'événement
+      const response = await taskService.getTasksByEventId(Number(id));
+      
+      if (response.success && response.data) {
+        console.log('✅ Tâches récupérées:', response.data);
+        setTasks(response.data);
+      } else {
+        console.error('❌ Erreur lors de la récupération des tâches:', response.error);
+        setError(response.error || 'Impossible de récupérer les tâches');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la récupération des tâches:', error);
+      setError('Erreur de connexion au serveur');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteTask = (taskId: number) => {
+  // Charger les tâches au montage du composant
+  useEffect(() => {
+    fetchEventTasks();
+  }, [id]);
+
+  // Rafraîchir les tâches quand on revient sur l'écran (après création)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (id) {
+        fetchEventTasks();
+      }
+    }, [id])
+  );
+
+
+
+  // Supprimer une tâche
+  const deleteTask = async (taskId: number) => {
     Alert.alert(
       'Supprimer la tâche',
       'Êtes-vous sûr de vouloir supprimer cette tâche ?',
@@ -92,231 +83,356 @@ export default function EventTasksScreen() {
         { 
           text: 'Supprimer', 
           style: 'destructive',
-          onPress: () => setTasks(tasks.filter(task => task.id !== taskId))
+          onPress: async () => {
+            try {
+              const response = await taskService.deleteTask(taskId);
+              
+              if (response.success) {
+                setTasks(tasks.filter(task => task.id !== taskId));
+                Alert.alert('Succès', 'Tâche supprimée avec succès !');
+              } else {
+                Alert.alert('Erreur', response.error || 'Impossible de supprimer la tâche');
+              }
+            } catch (error) {
+              Alert.alert('Erreur', 'Erreur lors de la suppression');
+            }
+          }
         }
       ]
     );
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return '#EF4444';
-      case 'medium': return '#F59E0B';
-      case 'low': return '#10B981';
-      default: return '#6B7280';
+  // Marquer une tâche comme validée
+  const validateTask = async (taskId: number) => {
+    Alert.alert(
+      'Valider la tâche',
+      'Êtes-vous sûr de vouloir valider cette tâche ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Valider', 
+          style: 'default',
+          onPress: async () => {
+            try {
+              const response = await taskService.validateTask(taskId);
+              
+              if (response.success && response.data) {
+                // Mettre à jour la tâche dans la liste
+                setTasks(tasks.map(task => 
+                  task.id === taskId ? response.data! : task
+                ));
+                Alert.alert('Succès', 'Tâche validée avec succès !');
+              } else {
+                Alert.alert('Erreur', response.error || 'Impossible de valider la tâche');
+              }
+            } catch (error) {
+              Alert.alert('Erreur', 'Erreur lors de la validation');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Annuler la validation d'une tâche
+  const unvalidateTask = async (taskId: number) => {
+    Alert.alert(
+      'Annuler la validation',
+      'Êtes-vous sûr de vouloir annuler la validation de cette tâche ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Annuler la validation', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await taskService.unvalidateTask(taskId);
+              
+              if (response.success && response.data) {
+                // Mettre à jour la tâche dans la liste
+                setTasks(tasks.map(task => 
+                  task.id === taskId ? response.data! : task
+                ));
+                Alert.alert('Succès', 'Validation de la tâche annulée !');
+              } else {
+                Alert.alert('Erreur', response.error || 'Impossible d\'annuler la validation');
+              }
+            } catch (error) {
+              Alert.alert('Erreur', 'Erreur lors de l\'annulation de la validation');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const getValidationColor = (validatedBy: number | null | undefined) => {
+    return validatedBy ? '#10b981' : '#f59e0b';
+  };
+
+  const getValidationIcon = (validatedBy: number | null | undefined) => {
+    return validatedBy ? 'checkmark-circle' : 'time';
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
     }
   };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'Haute';
-      case 'medium': return 'Moyenne';
-      case 'low': return 'Basse';
-      default: return 'Non définie';
-    }
-  };
+  // Affichage du chargement
+  if (loading) {
+    return (
+      <ProtectedRoute requireAuth={true}>
+        <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={{ marginTop: spacing[4], color: theme.textSecondary, fontSize: 16 }}>
+              Chargement des tâches...
+            </Text>
+            <Text style={{ marginTop: spacing[2], color: theme.textTertiary, fontSize: 14 }}>
+              Récupération des tâches de l'événement
+            </Text>
+          </View>
+        </View>
+      </ProtectedRoute>
+    );
+  }
 
-  const completedTasks = tasks.filter(task => task.completed);
-  const pendingTasks = tasks.filter(task => !task.completed);
+  // Affichage de l'erreur
+  if (error) {
+    return (
+      <ProtectedRoute requireAuth={true}>
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
+          <Header
+            title="Tâches de l'événement"
+            showBack={true}
+            onBack={() => router.back()}
+          />
+          
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[5] }}>
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: theme.error + '15',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: spacing[4]
+            }}>
+              <Ionicons name="alert-circle-outline" size={40} color={theme.error} />
+            </View>
+            
+            <Text style={{ 
+              fontSize: 20, 
+              fontWeight: 'bold', 
+              color: theme.text, 
+              marginBottom: spacing[2], 
+              textAlign: 'center' 
+            }}>
+              Erreur de chargement
+            </Text>
+            
+            <Text style={{ 
+              color: theme.textSecondary, 
+              marginBottom: spacing[6], 
+              textAlign: 'center',
+              lineHeight: 22,
+              paddingHorizontal: spacing[4]
+            }}>
+              {error}
+            </Text>
+            
+            <TouchableOpacity
+              style={{
+                backgroundColor: theme.primary,
+                paddingHorizontal: spacing[5],
+                paddingVertical: spacing[3],
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center'
+              }}
+              onPress={fetchEventTasks}
+            >
+              <Ionicons name="refresh" size={20} color="white" style={{ marginRight: spacing[2] }} />
+              <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ProtectedRoute>
+    );
+  }
+
+  const pendingTasks = tasks.filter(task => !task.validated_by);
+  const completedTasks = tasks.filter(task => task.validated_by);
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: theme.background }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Tâches de l'événement</Text>
-        <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: theme.background }]}
-          onPress={() => setShowAddForm(!showAddForm)}
+    <ProtectedRoute requireAuth={true}>
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
+        {/* Header */}
+        <Header
+          title="Tâches de l'événement"
+          showBack={true}
+          onBack={() => router.back()}
+          rightAction={{
+            icon: "add",
+            onPress: () => router.push(`/modals/create-task?eventId=${id}`)
+          }}
+        />
+
+
+
+        <ScrollView 
+          style={{ flex: 1, paddingHorizontal: spacing[4] }}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons 
-            name={showAddForm ? "close" : "add"} 
-            size={20} 
-            color="#FFFFFF" 
-          />
-        </TouchableOpacity>
-      </View>
-
-      {showAddForm && (
-        <Card style={styles.addForm}>
-          <Text style={styles.formTitle}>Nouvelle tâche</Text>
-          <Input
-            placeholder="Titre de la tâche"
-            value={newTaskTitle}
-            onChangeText={setNewTaskTitle}
-            style={styles.input}
-          />
-          <Input
-            placeholder="Description (optionnel)"
-            value={newTaskDescription}
-            onChangeText={setNewTaskDescription}
-            multiline
-            style={styles.input}
-          />
-          <View style={styles.formButtons}>
-            <Button 
-              title="Annuler" 
-              onPress={() => setShowAddForm(false)}
-              style={[styles.formButton, styles.cancelButton]}
-            />
-            <Button 
-              title="Ajouter" 
-              onPress={addTask}
-              style={styles.formButton}
-            />
-          </View>
-        </Card>
-      )}
-
-      <ScrollView style={styles.content}>
-        {pendingTasks.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tâches en cours ({pendingTasks.length})</Text>
-            {pendingTasks.map((task) => (
-              <Card key={task.id} style={styles.taskCard}>
-                <View style={styles.taskHeader}>
-                  <TouchableOpacity 
-                    style={styles.checkbox}
-                    onPress={() => toggleTask(task.id)}
-                  >
-                    <View style={[styles.checkboxInner, task.completed && styles.checkboxChecked]} />
-                  </TouchableOpacity>
-                  <View style={styles.taskInfo}>
-                    <Text style={styles.taskTitle}>{task.title}</Text>
-                    {task.description && (
-                      <Text style={styles.taskDescription}>{task.description}</Text>
-                    )}
-                    <View style={styles.taskMeta}>
-                      {task.assignedTo && (
-                        <Text style={styles.taskAssignee}>Assigné à: {task.assignedTo}</Text>
-                      )}
-                      {task.dueDate && (
-                        <Text style={styles.taskDueDate}>Échéance: {task.dueDate}</Text>
-                      )}
-                    </View>
-                  </View>
-                  <View style={styles.taskActions}>
-                    <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(task.priority) }]}>
-                      <Text style={styles.priorityText}>{getPriorityText(task.priority)}</Text>
-                    </View>
+          {pendingTasks.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Tâches en cours ({pendingTasks.length})
+              </Text>
+              {pendingTasks.map((task) => (
+                <Card key={task.id} variant="elevated" padding="medium" style={{ marginBottom: spacing[3] }}>
+                  <View style={styles.taskHeader}>
                     <TouchableOpacity 
-                      style={styles.deleteButton}
-                      onPress={() => deleteTask(task.id)}
+                      style={styles.checkbox}
+                      onPress={() => validateTask(task.id)}
                     >
-                      <Text style={styles.deleteButtonText}>×</Text>
+                      <View style={styles.checkboxInner} />
                     </TouchableOpacity>
+                    <View style={styles.taskInfo}>
+                      <Text style={[styles.taskTitle, { color: theme.text }]}>{task.title}</Text>
+                      {task.description && (
+                        <Text style={[styles.taskDescription, { color: theme.textSecondary }]}>
+                          {task.description}
+                        </Text>
+                      )}
+                                             <View style={styles.taskMeta}>
+                         <Text style={{ color: theme.textTertiary, fontSize: 12 }}>
+                           Créée le: {formatDate(task.created_at)}
+                         </Text>
+                       </View>
+                    </View>
+                    <View style={styles.taskActions}>
+                      <Badge 
+                        text="En attente" 
+                        color={getValidationColor(task.validated_by)}
+                      />
+                      <View style={styles.actionButtons}>
+                        <TouchableOpacity 
+                          style={[styles.actionButton, { backgroundColor: theme.primary + '20' }]}
+                          onPress={() => validateTask(task.id)}
+                        >
+                          <Ionicons name="checkmark-circle-outline" size={16} color={theme.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.actionButton, { backgroundColor: theme.backgroundSecondary }]}
+                          onPress={() => router.push(`/modals/update-task?taskId=${task.id}`)}
+                        >
+                          <Ionicons name="create-outline" size={16} color={theme.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.actionButton, { backgroundColor: theme.error + '20' }]}
+                          onPress={() => deleteTask(task.id)}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={theme.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
+                </Card>
+              ))}
+            </View>
+          )}
 
-        {completedTasks.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tâches terminées ({completedTasks.length})</Text>
-            {completedTasks.map((task) => (
-              <Card key={task.id} style={styles.taskCard}>
-                <View style={styles.taskHeader}>
-                  <TouchableOpacity 
-                    style={styles.checkbox}
-                    onPress={() => toggleTask(task.id)}
-                  >
-                    <View style={[styles.checkboxInner, styles.checkboxChecked]} />
-                  </TouchableOpacity>
-                  <View style={styles.taskInfo}>
-                    <Text style={[styles.taskTitle, styles.completedText]}>{task.title}</Text>
-                    {task.description && (
-                      <Text style={[styles.taskDescription, styles.completedText]}>{task.description}</Text>
-                    )}
+          {completedTasks.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Tâches terminées ({completedTasks.length})
+              </Text>
+              {completedTasks.map((task) => (
+                <Card key={task.id} variant="elevated" padding="medium" style={{ marginBottom: spacing[3] }}>
+                  <View style={styles.taskHeader}>
+                    <View style={[styles.checkbox, styles.checkboxChecked]}>
+                      <Ionicons name="checkmark" size={14} color="white" />
+                    </View>
+                    <View style={styles.taskInfo}>
+                      <Text style={[styles.taskTitle, styles.completedText, { color: theme.textSecondary }]}>
+                        {task.title}
+                      </Text>
+                      {task.description && (
+                        <Text style={[styles.taskDescription, styles.completedText, { color: theme.textTertiary }]}>
+                          {task.description}
+                        </Text>
+                      )}
+                                             <View style={styles.taskMeta}>
+                         <Text style={{ color: theme.textTertiary, fontSize: 12 }}>
+                           Terminée le: {formatDate(task.updated_at)}
+                         </Text>
+                       </View>
+                    </View>
+                    <View style={styles.taskActions}>
+                      <Badge 
+                        text="Validé" 
+                        color={getValidationColor(task.validated_by)}
+                      />
+                      <View style={styles.actionButtons}>
+                        <TouchableOpacity 
+                          style={[styles.actionButton, { backgroundColor: theme.warning + '20' }]}
+                          onPress={() => unvalidateTask(task.id)}
+                        >
+                          <Ionicons name="close-circle-outline" size={16} color={theme.warning} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.actionButton, { backgroundColor: theme.backgroundSecondary }]}
+                          onPress={() => router.push(`/modals/update-task?taskId=${task.id}`)}
+                        >
+                          <Ionicons name="create-outline" size={16} color={theme.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.actionButton, { backgroundColor: theme.error + '20' }]}
+                          onPress={() => deleteTask(task.id)}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={theme.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.deleteButton}
-                    onPress={() => deleteTask(task.id)}
-                  >
-                    <Text style={styles.deleteButtonText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
+                </Card>
+              ))}
+            </View>
+          )}
 
-        {tasks.length === 0 && (
-          <Card style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>Aucune tâche pour cet événement</Text>
-            <Text style={styles.emptyStateSubtext}>Ajoutez votre première tâche pour commencer</Text>
-          </Card>
-        )}
-      </ScrollView>
-    </View>
+          {tasks.length === 0 && (
+            <Card variant="elevated" padding="large" style={{ marginTop: spacing[6], alignItems: 'center' }}>
+              <Ionicons name="checkmark-circle-outline" size={64} color={theme.textTertiary} style={{ marginBottom: spacing[4] }} />
+              <Text style={[styles.emptyStateText, { color: theme.textSecondary }]}>
+                Aucune tâche pour cet événement
+              </Text>
+              <Text style={[styles.emptyStateSubtext, { color: theme.textTertiary }]}>
+                Ajoutez votre première tâche pour commencer
+              </Text>
+            </Card>
+          )}
+        </ScrollView>
+      </View>
+    </ProtectedRoute>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  title: {
-    fontSize: Math.min(20, width * 0.05),
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-    marginRight: 40,
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addForm: {
-    margin: 16,
-    padding: 16,
-  },
-  formTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  input: {
-    marginBottom: 12,
-  },
-  formButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  formButton: {
-    flex: 1,
-  },
-  cancelButton: {
-    backgroundColor: '#6B7280',
-  },
-  content: {
-    flex: 1,
-  },
   section: {
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
-    marginHorizontal: 16,
-    marginBottom: 8,
-  },
-  taskCard: {
-    marginHorizontal: 16,
     marginBottom: 8,
   },
   taskHeader: {
@@ -349,74 +465,40 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1F2937',
     marginBottom: 4,
   },
   taskDescription: {
     fontSize: 14,
-    color: '#6B7280',
     marginBottom: 8,
   },
   taskMeta: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  taskAssignee: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  taskDueDate: {
-    fontSize: 12,
-    color: '#6B7280',
+    marginTop: 4,
   },
   taskActions: {
     alignItems: 'flex-end',
     gap: 8,
   },
-  priorityBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 6,
   },
-  priorityText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
-  deleteButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#EF4444',
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  completedTask: {
-    opacity: 0.7,
-  },
   completedText: {
     textDecorationLine: 'line-through',
-    color: '#9CA3AF',
-  },
-  emptyState: {
-    margin: 16,
-    padding: 32,
-    alignItems: 'center',
   },
   emptyStateText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6B7280',
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#9CA3AF',
     textAlign: 'center',
   },
 }); 

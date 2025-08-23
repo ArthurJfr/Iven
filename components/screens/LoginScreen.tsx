@@ -79,7 +79,7 @@ export default function LoginScreen() {
       const loginData: LoginRequest = {
         email: formData.email,
         password: formData.password,
-        rememberMe: formData.rememberMe,
+      //  rememberMe: formData.rememberMe,
       };
 
       const response = await authService.login(loginData);
