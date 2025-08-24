@@ -10,7 +10,7 @@ function RootStack() {
   const themedStyles = createThemedStyles(theme);
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider >
       <AuthInitializer>
         <Stack
           screenOptions={{

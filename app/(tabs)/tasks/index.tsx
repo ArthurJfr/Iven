@@ -204,7 +204,7 @@ export default function TasksScreen() {
             { key: 'À faire', icon: 'time', count: tasks.filter(t => !t.validated_by).length },
             { key: 'En cours', icon: 'play', count: tasks.filter(t => !t.validated_by).length },
             { key: 'Terminées', icon: 'checkmark-circle', count: tasks.filter(t => t.validated_by).length }
-          ].map((filter) => (
+          ].map((filter, index) => (
             <TouchableOpacity
               key={filter.key}
               style={{
@@ -264,7 +264,7 @@ export default function TasksScreen() {
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task, index) => (
               <TouchableOpacity
-                key={task.id}
+                key={`task-${task.id}-${index}`}
                 style={{
                   marginBottom: spacing[3],
                 }}

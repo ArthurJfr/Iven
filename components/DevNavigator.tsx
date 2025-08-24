@@ -35,25 +35,44 @@ const routes: Route[] = [
   { name: 'Médias Event #1', path: '/events/1/media', group: 'Événements', icon: 'image-outline', description: 'Galerie média' },
   { name: 'Chat Event #1', path: '/events/1/chat', group: 'Événements', icon: 'chatbubble-outline', description: 'Chat temps réel' },
   { name: 'Gérer Event #1', path: '/events/1/manage', group: 'Événements', icon: 'cog-outline', description: 'Gestion événement' },
+  { name: 'Participants Event #1', path: '/events/1/participants', group: 'Événements', icon: 'people-outline', description: 'Liste des participants' },
   
-  // Other Routes
-  { name: 'Tâches', path: '/tasks', group: 'Autres', icon: 'list-outline', description: 'Toutes les tâches' },
-  { name: 'Tâche #1', path: '/tasks/1', group: 'Autres', icon: 'document-text-outline', description: 'Détail tâche' },
-  { name: 'Médias', path: '/media', group: 'Autres', icon: 'images-outline', description: 'Tous les médias' },
-  { name: 'Média #1', path: '/media/1', group: 'Autres', icon: 'image-outline', description: 'Visualiseur média' },
-  { name: 'Utilisateurs', path: '/users', group: 'Autres', icon: 'people-outline', description: 'Liste utilisateurs' },
-  { name: 'Utilisateur #1', path: '/users/1', group: 'Autres', icon: 'person-circle-outline', description: 'Profil utilisateur' },
-  { name: 'Notifications', path: '/notifications', group: 'Autres', icon: 'notifications-outline', description: 'Centre de notifications' },
+  // Tasks Routes
+  { name: 'Tâches', path: '/tasks', group: 'Tâches', icon: 'list-outline', description: 'Toutes les tâches' },
+  { name: 'Tâche #1', path: '/tasks/1', group: 'Tâches', icon: 'document-text-outline', description: 'Détail tâche' },
   
-  // Modals
-  { name: 'Créer Événement', path: '/modals/create-event', group: 'Modales', icon: 'add-circle-outline', description: 'Modal création événement' },
-  { name: 'Éditer Profil', path: '/modals/edit-profile', group: 'Modales', icon: 'create-outline', description: 'Modal édition profil' },
-  { name: 'Visualiseur Média', path: '/modals/media-viewer', group: 'Modales', icon: 'expand-outline', description: 'Modal visualiseur' },
-  { name: 'Inviter Participants', path: '/modals/invite-participants', group: 'Modales', icon: 'person-add-outline', description: 'Modal invitation' },
-  { name: 'Formulaire Dépense', path: '/modals/expense-form', group: 'Modales', icon: 'receipt-outline', description: 'Modal dépense' },
+  // Media Routes
+  { name: 'Médias', path: '/media', group: 'Médias', icon: 'images-outline', description: 'Tous les médias' },
+  { name: 'Média #1', path: '/media/1', group: 'Médias', icon: 'image-outline', description: 'Visualiseur média' },
   
-  // Special
+  // Users Routes
+  { name: 'Utilisateurs', path: '/users', group: 'Utilisateurs', icon: 'people-outline', description: 'Liste utilisateurs' },
+  { name: 'Utilisateur #1', path: '/users/1', group: 'Utilisateurs', icon: 'person-circle-outline', description: 'Profil utilisateur' },
+  
+  // Notifications
+  { name: 'Notifications', path: '/notifications', group: 'Notifications', icon: 'notifications-outline', description: 'Centre de notifications' },
+  
+  // Modals - Events
+  { name: 'Créer Événement', path: '/modals/create-event', group: 'Modales - Événements', icon: 'add-circle-outline', description: 'Modal création événement' },
+  { name: 'Ajouter Participant', path: '/modals/add-participant', group: 'Modales - Événements', icon: 'person-add-outline', description: 'Modal ajout participant' },
+  { name: 'Inviter Participants', path: '/modals/invite-participants', group: 'Modales - Événements', icon: 'person-add-outline', description: 'Modal invitation' },
+  
+  // Modals - Tasks
+  { name: 'Créer Tâche', path: '/modals/create-task', group: 'Modales - Tâches', icon: 'add-circle-outline', description: 'Modal création tâche' },
+  { name: 'Modifier Tâche', path: '/modals/update-task', group: 'Modales - Tâches', icon: 'create-outline', description: 'Modal modification tâche' },
+  
+  // Modals - Media
+  { name: 'Upload Média', path: '/modals/media-upload', group: 'Modales - Médias', icon: 'cloud-upload-outline', description: 'Modal upload média' },
+  { name: 'Visualiseur Média', path: '/modals/media-viewer', group: 'Modales - Médias', icon: 'expand-outline', description: 'Modal visualiseur' },
+  
+  // Modals - Profile & Others
+  { name: 'Éditer Profil', path: '/modals/edit-profile', group: 'Modales - Profil', icon: 'create-outline', description: 'Modal édition profil' },
+  { name: 'Formulaire Dépense', path: '/modals/expense-form', group: 'Modales - Autres', icon: 'receipt-outline', description: 'Modal dépense' },
+  
+  // Dev & Test Routes
   { name: 'UI Test', path: '/ui-test', group: 'Dev', icon: 'color-palette-outline', description: 'Showcase composants UI' },
+  { name: 'Test Auth', path: '/test-auth', group: 'Dev', icon: 'shield-checkmark-outline', description: 'Test authentification' },
+  { name: 'Test Général', path: '/test', group: 'Dev', icon: 'flask-outline', description: 'Tests généraux' },
 ];
 
 interface DevNavigatorProps {

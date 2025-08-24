@@ -62,7 +62,7 @@ export default function TabsLayout() {
   return (
     <SafeAreaView style={[
       layoutStyles.container, 
-      themedStyles.surface
+      { backgroundColor: 'transparent' }
     ]}>
       <KeyboardAvoidingView 
         style={layoutStyles.container} 
@@ -70,7 +70,7 @@ export default function TabsLayout() {
       >
         <Slot />
         <Debugger isDebugMode={false} />
-        <DevNavigator isVisible={false} />
+        <DevNavigator isVisible={true} />
       </KeyboardAvoidingView>
       {!shouldHideBottomBar && <BottomBar />}
     </SafeAreaView>

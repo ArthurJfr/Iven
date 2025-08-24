@@ -283,7 +283,7 @@ export default function EventDetailScreen() {
             <Text variant="h3" weight="semibold">
               Participants
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push(`/events/${id}/participants`)}>
               <Text variant="caption" color="primary">
                 Gérer
               </Text>
@@ -293,8 +293,8 @@ export default function EventDetailScreen() {
           <Card variant="elevated" padding="medium" style={{ marginBottom: spacing[6] }}>
             {event.participants && event.participants.length > 0 ? (
               <View style={[layoutStyles.gap3]}>
-                {event.participants.slice(0, 5).map((participant, index) => (
-                  <View key={participant.user_id} style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
+                {event.participants.slice(0, 5).map((participant) => (
+                  <View key={`participant-${participant.user_id}`} style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
                     <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
                       <View style={{
                         width: 32,
@@ -329,7 +329,10 @@ export default function EventDetailScreen() {
                 ))}
                 
                 {event.participants.length > 5 && (
-                  <TouchableOpacity style={{ alignItems: 'center', paddingTop: spacing[2] }}>
+                  <TouchableOpacity 
+                    style={{ alignItems: 'center', paddingTop: spacing[2] }}
+                    onPress={() => router.push(`/events/${id}/participants`)}
+                  >
                     <Text variant="small" color="primary">
                       Voir tous les {event.participants.length} participants
                     </Text>
@@ -364,8 +367,8 @@ export default function EventDetailScreen() {
                              {event.tasks
                  .filter(task => !task.validated_by)
                  .slice(0, 3)
-                 .map(task => (
-                  <TouchableOpacity key={task.id} onPress={() => router.push(`/tasks/${task.id}`)}>
+                 .map((task, index) => (
+                  <TouchableOpacity key={`task-${task.id}-${index}`} onPress={() => router.push(`/tasks/${task.id}`)}>
                     <Card variant="elevated" padding="medium">
                       <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
                         <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>

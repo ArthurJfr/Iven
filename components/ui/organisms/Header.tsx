@@ -35,7 +35,7 @@ export default function Header({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container]}>
       <View style={styles.content}>
         {/* Left side */}
         <View style={styles.left}>
@@ -76,7 +76,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 0,
     marginBottom: 0,
-
   },
   content: {
     flexDirection: 'row',

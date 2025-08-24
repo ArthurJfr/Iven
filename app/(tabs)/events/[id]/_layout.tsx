@@ -51,6 +51,12 @@ export default function EventLayout() {
           title: 'Gérer',
         }}
       />
+      <Stack.Screen
+        name="participants"
+        options={{
+          title: 'Participants',
+        }}
+      />
     </Stack>
   );
 } 
