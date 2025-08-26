@@ -22,16 +22,9 @@ import Card from '../../components/ui/Card';
 import Avatar from '../../components/ui/atoms/Avatar';
 import Badge from '../../components/ui/atoms/Badge';
 import { useAuth } from '../../contexts/AuthContext';
+import { invitationService, UserSearchResult, CreateInvitationRequest } from '../../services/InvitationService';
 
 const { width } = Dimensions.get('window');
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  fname?: string;
-  lname?: string;
-}
 
 export default function AddParticipantModal() {
   const router = useRouter();
@@ -40,12 +33,19 @@ export default function AddParticipantModal() {
   const { user } = useAuth();
   const themedStyles = createThemedStyles(theme);
 
+  // Debug: Vérifier l'eventId
+  console.log('🎯 EventId récupéré:', eventId);
+  console.log('🎯 Type de eventId:', typeof eventId);
+
   const [searchText, setSearchText] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserSearchResult[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<UserSearchResult[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [invitationMessage, setInvitationMessage] = useState('');
+  const [showMessageInput, setShowMessageInput] = useState(false);
 
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
@@ -63,50 +63,90 @@ export default function AddParticipantModal() {
         useNativeDriver: true,
       }),
     ]).start();
-
-    // Charger la liste des utilisateurs disponibles
-    loadAvailableUsers();
   }, []);
 
+  // Debug: Surveiller les changements d'état
   useEffect(() => {
-    // Filtrer les utilisateurs selon la recherche
-    if (searchText.trim() === '') {
-      setFilteredUsers(availableUsers);
-    } else {
-      const filtered = availableUsers.filter(user => 
-        user.username.toLowerCase().includes(searchText.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchText.toLowerCase()) ||
-        (user.fname && user.fname.toLowerCase().includes(searchText.toLowerCase())) ||
-        (user.lname && user.lname.toLowerCase().includes(searchText.toLowerCase()))
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [searchText, availableUsers]);
+    console.log('📊 État availableUsers changé:', availableUsers.length);
+  }, [availableUsers]);
+  
+  useEffect(() => {
+    console.log('📊 État filteredUsers changé:', filteredUsers.length);
+  }, [filteredUsers]);
+  
+  // Suppression du filtrage local - la recherche se fait maintenant via l'API
 
-  const loadAvailableUsers = async () => {
+  // Rechercher des utilisateurs via l'API
+  const searchUsers = async (query: string) => {
+    if (query.trim().length < 2) {
+      setAvailableUsers([]);
+      setFilteredUsers([]);
+      return;
+    }
+
     try {
-      setLoading(true);
-      // TODO: Remplacer par un vrai appel API pour récupérer tous les utilisateurs
-      // Pour l'instant, on utilise des données mockées
-      const mockUsers: User[] = [
-        { id: 1, username: 'alice_martin', email: 'alice@example.com', fname: 'Alice', lname: 'Martin' },
-        { id: 2, username: 'bob_dupont', email: 'bob@example.com', fname: 'Bob', lname: 'Dupont' },
-        { id: 3, username: 'claire_leblanc', email: 'claire@example.com', fname: 'Claire', lname: 'Leblanc' },
-        { id: 4, username: 'david_leroy', email: 'david@example.com', fname: 'David', lname: 'Leroy' },
-        { id: 5, username: 'emma_roux', email: 'emma@example.com', fname: 'Emma', lname: 'Roux' },
-      ];
+      setSearching(true);
+      console.log('🔍 Début de la recherche pour:', query);
+      console.log('📋 Paramètres de recherche:', { q: query.trim(), eventId: Number(eventId), excludeParticipants: true });
       
-      setAvailableUsers(mockUsers);
-      setFilteredUsers(mockUsers);
+      const response = await invitationService.searchUsers({
+        q: query.trim(),
+        event_id: Number(eventId),
+        excludeParticipants: true
+      });
+
+      console.log('📡 Réponse API reçue:', response);
+
+      if (response.success && response.data) {
+        console.log('✅ Recherche réussie, utilisateurs trouvés:', response.data.length);
+        
+        // Filtrer les utilisateurs déjà invités
+        const filteredUsers = response.data.filter(user => 
+          !selectedUsers.some(selected => selected.id === user.id)
+        );
+        
+        console.log('🔒 Utilisateurs après filtrage des sélectionnés:', filteredUsers.length);
+        
+        console.log('📝 Mise à jour des états avec', filteredUsers.length, 'utilisateurs');
+        setAvailableUsers(filteredUsers);
+        setFilteredUsers(filteredUsers);
+        console.log('✅ États mis à jour');
+      } else {
+        console.error('❌ Erreur lors de la recherche:', response.error);
+        console.error('❌ Détails de la réponse:', response);
+        setAvailableUsers([]);
+        setFilteredUsers([]);
+      }
     } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs:', error);
-      Alert.alert('Erreur', 'Impossible de charger la liste des utilisateurs');
+      console.error('❌ Erreur lors de la recherche:', error);
+      setAvailableUsers([]);
+      setFilteredUsers([]);
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   };
 
-  const toggleUser = (user: User) => {
+  // Recherche avec debounce
+  useEffect(() => {
+    console.log('🔍 useEffect déclenché avec searchText:', searchText);
+    console.log('🔍 Longueur searchText:', searchText.trim().length);
+    
+    const timeoutId = setTimeout(() => {
+      console.log('⏰ Timeout déclenché après 500ms');
+      if (searchText.trim().length >= 2) {
+        console.log('✅ Appel de searchUsers avec:', searchText);
+        searchUsers(searchText);
+      } else if (searchText.trim() === '') {
+        console.log('🗑️ Reset des utilisateurs (recherche vide)');
+        setAvailableUsers([]);
+        setFilteredUsers([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchText]);
+
+  const toggleUser = (user: UserSearchResult) => {
     setSelectedUsers(prev => {
       const isSelected = prev.some(u => u.id === user.id);
       if (isSelected) {
@@ -121,55 +161,67 @@ export default function AddParticipantModal() {
     return selectedUsers.some(user => user.id === userId);
   };
 
-  const handleAddParticipants = async () => {
+  const handleSendInvitations = async () => {
     if (selectedUsers.length === 0) {
-      Alert.alert('Sélection requise', 'Veuillez sélectionner au moins un participant');
+      Alert.alert('Sélection requise', 'Veuillez sélectionner au moins un utilisateur à inviter');
       return;
     }
 
     try {
-      setSearching(true);
+      setInviting(true);
       
-      // TODO: Remplacer par de vrais appels API
-      // Pour chaque utilisateur sélectionné, l'ajouter à l'événement
+      let successCount = 0;
+      let errorCount = 0;
+
       for (const user of selectedUsers) {
-        console.log(`Ajout du participant ${user.username} à l'événement ${eventId}`);
-        // await eventService.addParticipant(Number(eventId), user.id, 'participant');
+        try {
+          const invitationData: CreateInvitationRequest = {
+            event_id: Number(eventId),
+            user_id: user.id,
+            message: invitationMessage.trim() || undefined
+          };
+
+          const response = await invitationService.inviteUser(Number(eventId), invitationData);
+          
+          if (response.success) {
+            successCount++;
+            console.log(`✅ Invitation envoyée à ${user.username}`);
+          } else {
+            errorCount++;
+            console.error(`❌ Échec de l'invitation à ${user.username}:`, response.error);
+          }
+        } catch (error) {
+          errorCount++;
+          console.error(`❌ Erreur lors de l'invitation à ${user.username}:`, error);
+        }
+      }
+
+      // Afficher le résumé
+      let message = `${successCount} invitation(s) envoyée(s) avec succès !`;
+      if (errorCount > 0) {
+        message += `\n${errorCount} échec(s).`;
       }
 
       Alert.alert(
-        'Succès', 
-        `${selectedUsers.length} participant(s) ajouté(s) avec succès !`, 
+        successCount > 0 ? 'Succès' : 'Erreur', 
+        message, 
         [{ text: 'OK', onPress: () => router.back() }]
       );
       
     } catch (error: any) {
-      console.error('Erreur lors de l\'ajout des participants:', error);
-      Alert.alert('Erreur', error.message || 'Impossible d\'ajouter les participants');
+      console.error('Erreur lors de l\'envoi des invitations:', error);
+      Alert.alert('Erreur', error.message || 'Impossible d\'envoyer les invitations');
     } finally {
-      setSearching(false);
+      setInviting(false);
     }
   };
 
-  const getUserDisplayName = (user: User) => {
+  const getUserDisplayName = (user: UserSearchResult) => {
     if (user.fname && user.lname) {
       return `${user.fname} ${user.lname}`;
     }
     return user.username;
   };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-        <View style={[layoutStyles.center, { flex: 1 }]}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text variant="body" color="secondary" style={{ marginTop: spacing[3] }}>
-            Chargement des utilisateurs...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
@@ -205,7 +257,7 @@ export default function AddParticipantModal() {
             </TouchableOpacity>
             
             <Text variant="h3" weight="semibold">
-              Ajouter des participants
+              Inviter des participants
             </Text>
             
             <View style={{ width: 40 }} />
@@ -228,14 +280,61 @@ export default function AddParticipantModal() {
                   onChangeText={setSearchText}
                   placeholder="Nom, email ou nom d'utilisateur..."
                   leftIcon="search-outline"
+                  rightIcon={searching ? "sync" : undefined}
                 />
+                {searchText.trim().length > 0 && searchText.trim().length < 2 && (
+                  <Text variant="small" color="secondary" style={{ marginTop: spacing[2] }}>
+                    Tapez au moins 2 caractères pour rechercher
+                  </Text>
+                )}
               </View>
+
+              {/* Message personnalisé */}
+              {selectedUsers.length > 0 && (
+                <View style={{ marginBottom: spacing[6] }}>
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: spacing[3]
+                  }}>
+                    <Text variant="body" weight="semibold">
+                      Message d'invitation (optionnel)
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowMessageInput(!showMessageInput)}
+                      style={{
+                        padding: spacing[2],
+                        borderRadius: spacing[2],
+                        backgroundColor: theme.backgroundSecondary
+                      }}
+                    >
+                      <Ionicons 
+                        name={showMessageInput ? "chevron-up" : "chevron-down"} 
+                        size={20} 
+                        color={theme.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {showMessageInput && (
+                    <Input
+                      value={invitationMessage}
+                      onChangeText={setInvitationMessage}
+                      placeholder="Ajoutez un message personnalisé à votre invitation..."
+                      multiline
+                      numberOfLines={3}
+                      inputStyle={{ minHeight: 80 }}
+                    />
+                  )}
+                </View>
+              )}
 
               {/* Utilisateurs sélectionnés */}
               {selectedUsers.length > 0 && (
                 <View style={{ marginBottom: spacing[6] }}>
                   <Text variant="body" weight="semibold" style={{ marginBottom: spacing[3] }}>
-                    Participants sélectionnés ({selectedUsers.length})
+                    Utilisateurs à inviter ({selectedUsers.length})
                   </Text>
                   <View style={layoutStyles.gap2}>
                     {selectedUsers.map(user => (
@@ -277,7 +376,16 @@ export default function AddParticipantModal() {
                   Utilisateurs disponibles ({filteredUsers.length})
                 </Text>
                 
-                {filteredUsers.length > 0 ? (
+                {searching && (
+                  <View style={[layoutStyles.center, { paddingVertical: spacing[6] }]}>
+                    <ActivityIndicator size="large" color={theme.primary} />
+                    <Text variant="body" color="secondary" style={{ marginTop: spacing[3] }}>
+                      Recherche en cours...
+                    </Text>
+                  </View>
+                )}
+                
+                {!searching && filteredUsers.length > 0 && (
                   <View style={layoutStyles.gap3}>
                     {filteredUsers.map(user => (
                       <TouchableOpacity
@@ -327,15 +435,25 @@ export default function AddParticipantModal() {
                       </TouchableOpacity>
                     ))}
                   </View>
-                ) : (
+                )}
+                
+                {!searching && searchText.trim() === '' && (
                   <Card variant="outlined" padding="medium">
                     <View style={[layoutStyles.center, { paddingVertical: spacing[6] }]}>
                       <Ionicons name="search-outline" size={32} color={theme.textSecondary} />
                       <Text variant="body" color="secondary" style={{ marginTop: spacing[3], textAlign: 'center' }}>
-                        {searchText.trim() === '' 
-                          ? 'Aucun utilisateur disponible' 
-                          : 'Aucun utilisateur trouvé pour cette recherche'
-                        }
+                        Commencez à taper pour rechercher des utilisateurs
+                      </Text>
+                    </View>
+                  </Card>
+                )}
+                
+                {!searching && searchText.trim() !== '' && filteredUsers.length === 0 && (
+                  <Card variant="outlined" padding="medium">
+                    <View style={[layoutStyles.center, { paddingVertical: spacing[6] }]}>
+                      <Ionicons name="search-outline" size={32} color={theme.textSecondary} />
+                      <Text variant="body" color="secondary" style={{ marginTop: spacing[3], textAlign: 'center' }}>
+                        Aucun utilisateur trouvé pour cette recherche
                       </Text>
                     </View>
                   </Card>
@@ -358,12 +476,13 @@ export default function AddParticipantModal() {
                 onPress={() => router.back()}
                 variant="secondary"
                 style={{ flex: 1 }}
+                disabled={inviting}
               />
               <Button
-                title={`Ajouter (${selectedUsers.length})`}
-                onPress={handleAddParticipants}
+                title={inviting ? 'Envoi...' : `Envoyer (${selectedUsers.length})`}
+                onPress={handleSendInvitations}
                 style={{ flex: 1 }}
-                disabled={selectedUsers.length === 0 || searching}
+                disabled={selectedUsers.length === 0 || inviting}
               />
             </View>
           </View>

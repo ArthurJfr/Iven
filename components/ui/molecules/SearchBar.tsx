@@ -1,48 +1,75 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Input from '../Input';
 import { useTheme } from '../../../contexts/ThemeContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface SearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   onClear?: () => void;
+  onSearch?: () => void;
+  style?: any;
+  containerStyle?: any;
+  compact?: boolean;
 }
 
 export default function SearchBar({
   value,
   onChangeText,
   placeholder = 'Rechercher...',
-  onClear
+  onClear,
+  onSearch,
+  style,
+  containerStyle,
+  compact = false
 }: SearchBarProps) {
   const { theme } = useTheme();
 
+  const handleClear = () => {
+    onChangeText('');
+    onClear?.();
+  };
+
+  const handleSearch = () => {
+    onSearch?.();
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Ionicons 
-          name="search" 
-          size={20} 
-          color={theme.textSecondary || '#666'} 
-          style={styles.searchIcon} 
-        />
+    <View style={[styles.container, containerStyle]}>
+      <View style={[
+        styles.searchContainer, 
+        { 
+          paddingHorizontal: compact ? 12 : 16,
+          minHeight: compact ? 44 : 48
+        }, 
+        style
+      ]}>
         <Input
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          style={styles.input}
+          inputStyle={{
+            ...styles.input,
+            fontSize: compact ? 15 : 16,
+            paddingVertical: compact ? 8 : 10
+          }}
+          variant="filled"
+          size={compact ? "small" : "medium"}
         />
-        {value.length > 0 && onClear && (
-          <Ionicons 
-            name="close-circle" 
-            size={20} 
-            color={theme.textSecondary || '#666'} 
-            style={styles.clearIcon}
-            onPress={onClear}
-          />
+        {value.length > 0 && (
+          <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
+            <Ionicons 
+              name="close-circle" 
+              size={compact ? 18 : 20} 
+              color={theme.textSecondary} 
+            />
+          </TouchableOpacity>
         )}
+
       </View>
     </View>
   );
@@ -51,24 +78,38 @@ export default function SearchBar({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
+    width: '100%',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   searchIcon: {
-    position: 'absolute',
-    left: 12,
-    zIndex: 1,
+    marginRight: 12,
   },
   input: {
-    paddingLeft: 40,
-    paddingRight: 40,
+    flex: 1,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    marginRight: 8,
   },
-  clearIcon: {
-    position: 'absolute',
-    right: 12,
-    zIndex: 1,
+  clearButton: {
+    padding: 6,
+    marginRight: 4,
+    borderRadius: 12,
+  },
+  searchButton: {
+    padding: 6,
+    marginRight: 4,
+    borderRadius: 12,
   },
 }); 

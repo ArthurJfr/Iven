@@ -5,11 +5,17 @@ import { useTheme } from '../../../contexts/ThemeContext';
 interface DividerProps {
   orientation?: 'horizontal' | 'vertical';
   spacing?: 'small' | 'medium' | 'large';
+  color?: string;
+  thickness?: number;
+  style?: any;
 }
 
 export default function Divider({ 
   orientation = 'horizontal', 
-  spacing = 'medium' 
+  spacing = 'medium',
+  color,
+  thickness = 1,
+  style
 }: DividerProps) {
   const { theme } = useTheme();
 
@@ -24,30 +30,26 @@ export default function Divider({
   };
 
   const getDividerStyle = () => {
+    const dividerColor = color || theme.border;
+    
     if (orientation === 'horizontal') {
       return {
-        height: 1,
+        height: thickness,
         width: '100%',
-        backgroundColor: '#E5E7EB',
+        backgroundColor: dividerColor,
       };
     } else {
       return {
-        width: 1,
+        width: thickness,
         height: '100%',
-        backgroundColor: '#E5E7EB',
+        backgroundColor: dividerColor,
       };
     }
   };
 
   return (
-    <View style={getSpacingStyle()}>
-      <View style={[StyleSheet.create({
-        divider: {
-          height: orientation === 'horizontal' ? 1 : '100%',
-          width: orientation === 'horizontal' ? '100%' : 1,
-          backgroundColor: '#E5E7EB'
-        }
-      }).divider]} />
+    <View style={[getSpacingStyle(), style]}>
+      <View style={getDividerStyle()} />
     </View>
   );
 }

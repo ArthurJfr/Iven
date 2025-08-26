@@ -5,11 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { createThemedStyles, layoutStyles, spacing } from '../../styles';
 import Text from '../../components/ui/atoms/Text';
-import Card from '../../components/ui/Card';
 import Header from '../../components/ui/organisms/Header';
 import Avatar from '../../components/ui/atoms/Avatar';
-import Badge from '../../components/ui/atoms/Badge';
-import EventCard from '../../components/ui/EventCard';
+import { EventCard } from '../../components/features/events';
+import { HomeStats, HomeActions, HomeUpcomingEvents, HomeSettings } from '../../components/features/home';
 import { useAuth } from '../../contexts/AuthContext';
 import { eventService } from '../../services/EventService';
 import { taskService } from '../../services/TaskService';
@@ -29,7 +28,7 @@ export default function HomeScreen() {
   const [stats, setStats] = useState({
     eventsThisMonth: 0,
     pendingTasks: 0,
-    totalParticipants: 0
+    completedTasks: 0
   });
 
   const onRefresh = async () => {
@@ -66,7 +65,16 @@ export default function HomeScreen() {
           return eventDate.getMonth() === thisMonth && eventDate.getFullYear() === thisYear;
         });
         
-        setUpcomingEvents(eventsThisMonth.slice(0, 2)); // Garder seulement 2 événements
+        // Ajouter les participants à chaque événement avant de les stocker
+        const eventsWithParticipants = await Promise.all(eventsThisMonth.map(async (event) => {
+          const participantsResponse = await eventService.getEventParticipants(event.id);
+          return {
+            ...event,
+            participants: participantsResponse.success ? participantsResponse.data.participants : []
+          };
+        }));
+
+        setUpcomingEvents(eventsWithParticipants.slice(0, 2)); // Garder seulement 2 événements
       }
     } catch (error) {
       console.error('❌ Erreur lors du chargement des événements:', error);
@@ -106,21 +114,14 @@ export default function HomeScreen() {
       const pendingTasks = tasksResponse.success && tasksResponse.data ? 
         tasksResponse.data.filter(task => !task.validated_by).length : 0;
 
-      // Total participants (compter tous les participants de tous les événements)
-      let totalParticipants = 0;
-      if (eventsResponse.success && eventsResponse.data) {
-        for (const event of eventsResponse.data) {
-          const participantsResponse = await eventService.getEventParticipants(event.id);
-          if (participantsResponse.success && participantsResponse.data?.participants) {
-            totalParticipants += participantsResponse.data.participants.length;
-          }
-        }
-      }
+      // Tâches validées (terminées)
+      const completedTasks = tasksResponse.success && tasksResponse.data ? 
+        tasksResponse.data.filter(task => task.validated_by).length : 0;
 
       setStats({
         eventsThisMonth,
         pendingTasks,
-        totalParticipants
+        completedTasks
       });
     } catch (error) {
       console.error('❌ Erreur lors du calcul des statistiques:', error);
@@ -147,26 +148,7 @@ export default function HomeScreen() {
     );
   }
 
-  const quickStats = [
-    { 
-      label: 'Événements\nce mois', 
-      value: stats.eventsThisMonth.toString(), 
-      color: theme.primary, 
-      icon: 'calendar-outline' 
-    },
-    { 
-      label: 'Tâches\nà faire', 
-      value: stats.pendingTasks.toString(), 
-      color: '#FF9500', 
-      icon: 'checkmark-circle-outline' 
-    },
-    { 
-      label: 'Participants\ntotal', 
-      value: stats.totalParticipants.toString(), 
-      color: '#34C759', 
-      icon: 'people-outline' 
-    },
-  ];
+
 
   const quickActions = [
     {
@@ -175,13 +157,6 @@ export default function HomeScreen() {
       icon: 'add-circle',
       color: theme.primary,
       action: () => router.push('/modals/create-event')
-    },
-    {
-      title: 'Voir le calendrier',
-      subtitle: 'Planning complet',
-      icon: 'calendar',
-      color: '#4ECDC4',
-      action: () => router.push('/calendars')
     },
     {
       title: 'Mes tâches',
@@ -216,8 +191,8 @@ export default function HomeScreen() {
         }
       >
         {/* Section de bienvenue avec avatar */}
-        <View style={{ paddingHorizontal: spacing[5], paddingTop: spacing[4], paddingBottom: spacing[6] }}>
-          <View style={[layoutStyles.row, { alignItems: 'center', marginBottom: spacing[6] }]}>
+        <View style={{ paddingHorizontal: spacing[5], paddingTop: spacing[4] }}>
+          <View style={[layoutStyles.row, { alignItems: 'center' }]}>
             <Avatar
               size="large"
               source={undefined}
@@ -250,248 +225,45 @@ export default function HomeScreen() {
           </View>
 
           {/* Statistiques rapides */}
-          <View style={[layoutStyles.row, { marginBottom: spacing[6] }]}>
-            {quickStats.map((stat, index) => (
-              <View key={index} style={[layoutStyles.centerHorizontal, { flex: 1 }]}>
-                <View style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: stat.color + '15',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: spacing[2]
-                }}>
-                  <Ionicons name={stat.icon as any} size={24} color={stat.color} />
-                </View>
-                <Text variant="h3" weight="bold" style={{ marginBottom: spacing[1] }}>
-                  {stat.value}
-                </Text>
-                <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-                  {stat.label}
-                </Text>
-              </View>
-            ))}
-          </View>
         </View>
+        <HomeStats stats={stats} compact={true} />
 
         {/* Actions rapides */}
-        <View style={{ paddingHorizontal: spacing[5], marginBottom: spacing[6] }}>
-          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[4] }}>
-            Actions rapides
-          </Text>
-          
-          <View style={{ gap: spacing[3] }}>
-            {quickActions.map((action, index) => (
-              <TouchableOpacity key={index} onPress={action.action}>
-                <Card variant="elevated" padding="medium">
-                  <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                    <View style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
-                      backgroundColor: action.color + '15',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: spacing[4]
-                    }}>
-                      <Ionicons name={action.icon as any} size={24} color={action.color} />
-                    </View>
-                    
-                    <View style={{ flex: 1 }}>
-                      <Text variant="body" weight="semibold" style={{ marginBottom: 2 }}>
-                        {action.title}
-                      </Text>
-                      <Text variant="caption" color="secondary">
-                        {action.subtitle}
-                      </Text>
-                    </View>
-                    
-                    <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        <HomeActions
+          actions={quickActions.map(action => ({
+            title: action.title,
+            subtitle: action.subtitle,
+            icon: action.icon,
+            color: action.color,
+            route: action.action.toString()
+          }))}
+          onActionPress={(route) => {
+            // Exécuter l'action correspondante
+            if (route.includes('create-event')) {
+              router.push('/modals/create-event');
+            } else if (route.includes('tasks')) {
+              router.push('/tasks');
+            }
+          }}
+          compact={false}
+        />
 
         {/* Prochains événements */}
-        <View style={{ paddingHorizontal: spacing[5], marginBottom: spacing[6] }}>
-          <View style={[layoutStyles.rowBetween, { marginBottom: spacing[4], alignItems: 'center' }]}>
-            <Text variant="h3" weight="semibold">
-              Prochains événements
-            </Text>
-            <TouchableOpacity onPress={() => router.push('/events')}>
-              <Text variant="caption" color="primary">
-                Voir tout
-              </Text>
-            </TouchableOpacity>
-          </View>
+        <HomeUpcomingEvents
+          events={upcomingEvents}
+          onEventPress={(event) => router.push(`/events/${event.id}`)}
+          onViewAllPress={() => router.push('/events')}
+          onCreateEventPress={() => router.push('/modals/create-event')}
+          compact={false}
+        />
 
-          {upcomingEvents.length > 0 ? (
-            <View style={{ gap: spacing[3] }}>
-              {upcomingEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onPress={() => router.push(`/events/${event.id}`)}
-                  showLocation={true}
-                  compact={false}
-                  variant="elevated"
-                />
-              ))}
-            </View>
-          ) : (
-            <Card variant="outlined" padding="large">
-              <View style={[layoutStyles.centerHorizontal]}>
-                <Ionicons name="calendar-outline" size={48} color={theme.textSecondary} style={{ marginBottom: spacing[3] }} />
-                <Text variant="body" color="secondary" style={{ textAlign: 'center', marginBottom: spacing[2] }}>
-                  Aucun événement planifié
-                </Text>
-                <TouchableOpacity onPress={() => router.push('/modals/create-event')}>
-                  <Text variant="caption" color="primary">
-                    Créer votre premier événement
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </Card>
-          )}
-        </View>
-
-        {/* Section paramètres et outils */}
-        <View style={{ paddingHorizontal: spacing[5] }}>
-          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[4] }}>
-            Paramètres
-          </Text>
-          
-          <View style={{ gap: spacing[3] }}>
-            {/* Profil utilisateur */}
-            <TouchableOpacity onPress={() => router.push('/profile')}>
-              <Card variant="outlined" padding="medium">
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: theme.primary + '15',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: spacing[3]
-                  }}>
-                    <Ionicons name="person" size={20} color={theme.primary} />
-                  </View>
-                  
-                  <View style={{ flex: 1 }}>
-                    <Text variant="caption" weight="medium">
-                      Mon profil
-                    </Text>
-                    <Text variant="small" color="secondary">
-                      {user.email}
-                    </Text>
-                  </View>
-                  
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-
-            {/* Mode développement */}
-            <TouchableOpacity onPress={() => router.push('/ui-test')}>
-              <Card variant="outlined" padding="medium">
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: theme.backgroundSecondary,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: spacing[3]
-                  }}>
-                    <Ionicons name="color-palette" size={20} color={theme.primary} />
-                  </View>
-                  
-                  <View style={{ flex: 1 }}>
-                    <Text variant="caption" weight="medium">
-                      UI Components Showcase
-                    </Text>
-                    <Text variant="small" color="secondary">
-                      Mode développement
-                    </Text>
-                  </View>
-                  
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-
-            {/* Test Auth */}
-            <TouchableOpacity onPress={() => router.push('/test-auth')}>
-              <Card variant="outlined" padding="medium">
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#4ECDC4' + '15',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: spacing[3]
-                  }}>
-                    <Ionicons name="shield-checkmark" size={20} color="#4ECDC4" />
-                  </View>
-                  
-                  <View style={{ flex: 1 }}>
-                    <Text variant="caption" weight="medium">
-                      Tests d'authentification
-                    </Text>
-                    <Text variant="small" color="secondary">
-                      Debug auth & sessions
-                    </Text>
-                  </View>
-                  
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </View>
-              </Card>
-            </TouchableOpacity>
-
-            {/* Déconnexion */}
-            <TouchableOpacity 
-              onPress={async () => {
-                console.log('🚪 Déconnexion...');
-                await logout();
-                // La redirection sera gérée par AuthInitializer
-              }}
-            >
-              <Card variant="outlined" padding="medium">
-                <View style={[layoutStyles.row, { alignItems: 'center' }]}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#FF453A' + '15',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: spacing[3]
-                  }}>
-                    <Ionicons name="log-out" size={20} color="#FF453A" />
-                  </View>
-                  
-                  <View style={{ flex: 1 }}>
-                    <Text variant="caption" weight="medium" style={{ color: '#FF453A' }}>
-                      Se déconnecter
-                    </Text>
-                    <Text variant="small" color="secondary">
-                      Revenir à l'écran de connexion
-                    </Text>
-                  </View>
-                  
-                  <Ionicons name="log-out" size={16} color="#FF453A" />
-                </View>
-              </Card>
-            </TouchableOpacity>
-          </View>
-        </View>
+                {/* Section paramètres et outils */}
+        <HomeSettings
+          onProfilePress={() => router.push('/profile')}
+          onLogoutPress={logout}
+          userEmail={user.email}
+          compact={false}
+        />
       </ScrollView>
     </SafeAreaView>
   );

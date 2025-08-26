@@ -70,7 +70,7 @@ export default function TabsLayout() {
       >
         <Slot />
         <Debugger isDebugMode={false} />
-        <DevNavigator isVisible={true} />
+        <DevNavigator isVisible={false} />
       </KeyboardAvoidingView>
       {!shouldHideBottomBar && <BottomBar />}
     </SafeAreaView>

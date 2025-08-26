@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,8 @@ import { eventService } from '../../../services/EventService';
 import { Event } from '../../../types/events';
 import { RefreshControl } from 'react-native';  
 import Header from '../../../components/ui/organisms/Header';
+import { spacing } from '../../../styles';
+import { EventList, EventFilters, EventStats } from '../../../components/features/events';
 
 export default function EventsListScreen() {
   const { theme } = useTheme();
@@ -18,7 +20,9 @@ export default function EventsListScreen() {
   
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState('Toutes');
 
   // Récupérer les événements de l'utilisateur connecté
   const fetchUserEvents = async () => {
@@ -59,10 +63,49 @@ export default function EventsListScreen() {
     fetchUserEvents();
   }, [user?.id]);
 
-  // Fonction de rafraîchissement (pull-to-refresh)
-  const handleRefresh = () => {
-    fetchUserEvents();
-  };
+  // Fonction de gestion des changements de filtre optimisée
+  const handleFilterChange = useCallback((filter: string) => {
+    setActiveFilter(filter);
+  }, []);
+
+  // Événements filtrés selon le filtre actif
+  const filteredEvents = useMemo(() => {
+    switch (activeFilter) {
+      case 'À venir':
+        return events.filter(event => new Date(event.start_date) > new Date());
+      case 'En cours':
+        return events.filter(event => {
+          const now = new Date();
+          const start = new Date(event.start_date);
+          const end = new Date(event.end_date);
+          return now >= start && now <= end;
+        });
+      case 'Terminés':
+        return events.filter(event => new Date(event.end_date) < new Date());
+      default:
+        return events;
+    }
+  }, [events, activeFilter]);
+
+  // Filtres disponibles avec compteurs
+  const filters = useMemo(() => [
+    { key: 'Toutes', label: 'Toutes', icon: 'apps-outline', count: events.length },
+    { key: 'À venir', label: 'À venir', icon: 'time-outline', count: events.filter(e => new Date(e.start_date) > new Date()).length },
+
+    { key: 'Terminés', label: 'Terminés', icon: 'checkmark-circle-outline', count: events.filter(e => new Date(e.end_date) < new Date()).length }
+  ], [events]);
+
+  // Fonction de gestion des clics sur les événements optimisée
+  const handleEventPress = useCallback((event: Event) => {
+    router.push(`/events/${event.id}`);
+  }, [router]);
+
+  // Fonction de rafraîchissement (pull-to-refresh) optimisée
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchUserEvents();
+    setRefreshing(false);
+  }, []);
 
   // Affichage du chargement
   if (loading) {
@@ -89,7 +132,7 @@ export default function EventsListScreen() {
             }}
           />
           
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginTop: spacing[8] }}>
             <Ionicons name="alert-circle-outline" size={64} color={theme.error} />
             <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginTop: 16, textAlign: 'center' }}>
               Erreur de chargement
@@ -127,7 +170,7 @@ export default function EventsListScreen() {
             }}
           />
           
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginTop: spacing[8] }}>
             <Ionicons name="calendar-outline" size={64} color={theme.textSecondary} />
             <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginTop: 16, textAlign: 'center' }}>
               Aucun événement
@@ -164,70 +207,31 @@ export default function EventsListScreen() {
           }}
         />
 
-        {/* Liste des événements */}
-        <ScrollView 
-          style={{ flex: 1, paddingHorizontal: 20 }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={handleRefresh}
-              colors={[theme.primary]}
-              tintColor={theme.primary}
-            />
-          }
-        >
-          {events.map(event => (
-            <Card
-              key={event.id}
-              style={{ marginBottom: 12 }}
-              variant="elevated"
-              padding="medium"
-              onPress={() => router.push(`/events/${event.id}`)}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', flex: 1, color: theme.text }}>{event.title}</Text>
-                <View style={{
-                  backgroundColor: theme.primaryDark,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                }}>
-                <Text style={{ color: '#FFF', fontSize: 12 }}>{event.participants.length || 'upcoming'}</Text>
-                </View>
-              </View>
-              
-              {event.description && (
-                <Text style={{ color: theme.textSecondary, marginBottom: 8, lineHeight: 20 }}>
-                  {event.description}
-                </Text>
-              )}
-              
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
-                <Text style={{ color: theme.textSecondary, marginLeft: 8 }}>
-                  {event.start_date ? new Date(event.start_date).toLocaleDateString('fr-FR') : 'Date non définie'}
-                </Text>
-              </View>
-              
-              {event.location && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                  <Ionicons name="location-outline" size={16} color={theme.textSecondary} />
-                  <Text style={{ color: theme.textSecondary, marginLeft: 8 }}>{event.location}</Text>
-                </View>
-              )}
-              
-              {event.participants && event.participants.length > 0 && (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="people-outline" size={16} color={theme.textSecondary} />
-                  <Text style={{ color: theme.textSecondary, marginLeft: 8 }}>
-                    {event.participants.length} participant{event.participants.length > 1 ? 's' : ''}
-                  </Text>
-                </View>
-              )}
-            </Card>
-          ))}
-        </ScrollView>
+        {/* Contenu principal avec composants optimisés */}
+        <View style={{ flex: 1, paddingTop: spacing[8] }}>
+          {/* Statistiques des événements */}
+          
+          {/* Filtres des événements */}
+          <EventFilters
+            filters={filters}
+            activeFilter={activeFilter}
+            onFilterChange={handleFilterChange}
+            compact={false}
+          />
+          
+          {/* Liste des événements optimisée */}
+          <EventList 
+            style={{ paddingTop: spacing[8] }}
+            events={filteredEvents}
+            onEventPress={handleEventPress}
+            onRefresh={handleRefresh}
+            refreshing={refreshing}
+            loading={loading}
+            compact={true}
+            showLocation={true}
+            showParticipants={true}
+          />
+        </View>
       </View>
     </ProtectedRoute>
   );

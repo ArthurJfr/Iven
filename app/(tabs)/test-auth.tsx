@@ -4,7 +4,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { createThemedStyles, spacing } from "../../styles";
 import Button from "../../components/ui/Button";
 import { authService } from "../../services/AuthService";
-import AccountActivationBanner from "../../components/ui/AccountActivationBanner";
+import { AccountActivationBanner } from "../../components/features/auth";
 import { useRouter } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

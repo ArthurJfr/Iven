@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import TopBar from './TopBar';
-import { useTheme } from '../../contexts/ThemeContext';
+import TopBar from '../../ui/TopBar';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface EventsTopBarProps {
   title: string;

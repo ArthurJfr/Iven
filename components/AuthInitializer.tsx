@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/AuthService';
+import { invitationService, type Invitation } from '../services/InvitationService';
 import { useTheme } from '../contexts/ThemeContext';
 import { spacing } from '../styles';
 import Spinner from './ui/atoms/Spinner';
@@ -21,6 +22,7 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isLoading, isCheckingToken } = useAuth();
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -53,6 +55,38 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
       return () => clearTimeout(navigationTimeout);
     }
   }, [isAuthenticated, isLoading, segments]);
+
+  // Récupérer les invitations quand l'utilisateur est connecté
+  useEffect(() => {
+    const loadInvitations = async () => {
+      if (isAuthenticated && !isLoading) {
+        try {
+          console.log('📨 Récupération des invitations...');
+          const response = await invitationService.getUserInvitations();
+          
+          if (response.success && response.data) {
+            setInvitations(response.data);
+            
+            // Vérifier s'il y a des invitations en attente
+            const pendingInvitations = response.data.filter(inv => inv.status === 'pending');
+            if (pendingInvitations.length > 0) {
+              console.log(`📨 ${pendingInvitations.length} invitation(s) en attente`);
+            } else {
+              console.log('📨 Aucune invitation en attente');
+            }
+          } else {
+            console.log('📨 Aucune invitation trouvée ou erreur:', response.message);
+            setInvitations([]);
+          }
+        } catch (error) {
+          console.error('❌ Erreur lors de la récupération des invitations:', error);
+          setInvitations([]);
+        }
+      }
+    };
+
+    loadInvitations();
+  }, [isAuthenticated, isLoading]);
 
   // Afficher un écran de chargement pendant l'initialisation
   if (isLoading) {

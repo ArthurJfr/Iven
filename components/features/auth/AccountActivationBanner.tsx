@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useTheme } from '../../contexts/ThemeContext';
-import { spacing } from '../../styles';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { spacing } from '../../../styles';
 import { Ionicons } from '@expo/vector-icons';
-import Text from './atoms/Text';
+import Text from '../../ui/atoms/Text';
 
 interface AccountActivationBannerProps {
   email: string;
@@ -101,18 +101,16 @@ export default function AccountActivationBanner({
 const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: spacing[4],
-    marginHorizontal: spacing[4],
-    marginVertical: spacing[2],
+    borderRadius: 8,
+    padding: spacing[3],
+    marginBottom: spacing[3],
   },
   content: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: spacing[3],
   },
   icon: {
-    marginRight: spacing[3],
+    marginRight: spacing[2],
     marginTop: 2,
   },
   textContainer: {
@@ -120,18 +118,17 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    marginTop: spacing[2],
   },
   activateButton: {
-    paddingHorizontal: spacing[4],
+    paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
-    borderRadius: 8,
-    flex: 1,
-    alignItems: 'center',
+    borderRadius: 6,
+    marginRight: spacing[2],
   },
   dismissButton: {
-    padding: spacing[2],
-    marginLeft: spacing[2],
+    padding: spacing[1],
   },
 });

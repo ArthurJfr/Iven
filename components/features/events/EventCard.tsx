@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../contexts/ThemeContext';
-import { createThemedStyles, spacing } from '../../styles';
-import Text from './atoms/Text';
-import Card from './Card';
-import Badge from './atoms/Badge';
-import { Event } from '../../types/events';
-import { taskService, TaskService } from '../../services/TaskService';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { createThemedStyles, spacing } from '../../../styles';
+import Text from '../../ui/atoms/Text';
+import Card from '../../ui/Card';
+import Badge from '../../ui/atoms/Badge';
+import { Event } from '../../../types/events';
+import { taskService, TaskService } from '../../../services/TaskService';
 
 interface EventCardProps {
   event: Event;
@@ -18,32 +18,34 @@ interface EventCardProps {
   variant?: 'elevated' | 'outlined' | 'flat';
 }
 
-export default function EventCard({ 
+export const EventCard = React.memo(({ 
   event, 
   onPress, 
   showLocation = true, 
   showParticipants = false,
   compact = false,
   variant = 'elevated'
-}: EventCardProps) {
+}: EventCardProps) => {
   const { theme } = useTheme();
   const themedStyles = createThemedStyles(theme);
 
-  const formatDate = (dateString: string) => {
+  // Mémoriser les fonctions de formatage pour éviter les recréations
+  const formatDate = useCallback((dateString: string) => {
     return TaskService.formatDate(dateString);
-  };
+  }, []);
 
-  const formatTime = (dateString: string) => {
+  const formatTime = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleTimeString('fr-FR', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
-  };
+  }, []);
 
-  const getStatusConfig = (startDate: string, endDate: string) => {
+  // Mémoriser la configuration du statut pour éviter les recalculs
+  const statusConfig = useMemo(() => {
     const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(event.start_date);
+    const end = new Date(event.end_date);
     
     if (now < start) {
       return { text: 'À venir', color: theme.primary, icon: 'time-outline' };
@@ -52,11 +54,10 @@ export default function EventCard({
     } else {
       return { text: 'Terminé', color: theme.success, icon: 'checkmark-circle-outline' };
     }
-  };
+  }, [event.start_date, event.end_date, theme.primary, theme.warning, theme.success]);
 
-  const statusConfig = getStatusConfig(event.start_date, event.end_date);
-
-  const CardContent = () => (
+  // Mémoriser le contenu de la carte pour éviter les re-renders inutiles
+  const CardContent = useMemo(() => (
     <View style={compact ? {} : { padding: spacing[4] }}>
       {/* En-tête avec titre et statut */}
       <View style={{ 
@@ -174,13 +175,13 @@ export default function EventCard({
         </View>
       )}
     </View>
-  );
+  ), [event, compact, showLocation, showParticipants, statusConfig, formatDate, formatTime, theme.textSecondary]);
 
   if (onPress) {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
         <Card variant={variant} padding={compact ? "small" : "medium"}>
-          <CardContent />
+          {CardContent}
         </Card>
       </TouchableOpacity>
     );
@@ -188,7 +189,10 @@ export default function EventCard({
 
   return (
     <Card variant={variant} padding={compact ? "small" : "medium"}>
-      <CardContent />
+      {CardContent}
     </Card>
   );
-} 
+});
+
+// Export par défaut pour maintenir la compatibilité
+export default EventCard; 

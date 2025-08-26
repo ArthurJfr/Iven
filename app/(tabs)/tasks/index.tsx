@@ -1,32 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Animated } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, ScrollView, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { taskService, TaskService } from '../../../services/TaskService';
 import { Task } from '../../../types/tasks';
-import Header from '../../../components/ui/organisms/Header';
-import Card from '../../../components/ui/Card';
-import Badge from '../../../components/ui/atoms/Badge';
+import { 
+  Header, 
+  LoadingOverlay, 
+  EmptyState,
+  SearchBar,
+  Text,
+} from '../../../components/ui';
+import { TaskCard, TaskList, TaskFilters, TaskStats } from '../../../components/features/tasks';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { createThemedStyles, spacing } from '../../../styles';
 
 export default function TasksScreen() {
+  // 1. Hooks de contexte et de navigation (toujours en premier)
   const router = useRouter();
   const { user } = useAuth();
   const { theme } = useTheme();
   const themedStyles = createThemedStyles(theme);
   
+  // 2. Hooks d'état (toujours dans le même ordre)
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('Toutes');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [fadeAnim] = useState(new Animated.Value(0));
 
-  // Récupérer les tâches de l'utilisateur connecté
-  const fetchUserTasks = async () => {
+  // 3. Fonction de récupération des tâches - optimisée avec useCallback
+  const fetchUserTasks = useCallback(async () => {
     if (!user?.id) {
       setError('Utilisateur non connecté');
       setLoading(false);
@@ -64,58 +72,79 @@ export default function TasksScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, fadeAnim]);
 
-  // Fonction de rafraîchissement (pull-to-refresh)
-  const handleRefresh = async () => {
+  // 4. Fonction de rafraîchissement (pull-to-refresh) optimisée
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchUserTasks();
     setRefreshing(false);
-  };
+  }, [fetchUserTasks]);
 
-  // Charger les tâches au montage du composant
-  useEffect(() => {
-    fetchUserTasks();
-  }, [user?.id]);
+  // 5. Fonction de gestion des changements de filtre optimisée
+  const handleFilterChange = useCallback((filter: string) => {
+    setActiveFilter(filter);
+  }, []);
 
-  // Filtrer les tâches selon le filtre actif
-  const getFilteredTasks = () => {
+  // 6. Fonction de gestion des mises à jour de tâches optimisée
+  const handleTaskUpdate = useCallback((updatedTask: Task) => {
+    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+  }, [tasks]);
+
+  // 7. Filtrer les tâches selon le filtre actif et la recherche - optimisé avec useMemo
+  const filteredTasks = useMemo(() => {
+    let filteredTasks = tasks;
+    
+    // Filtre par statut
     switch (activeFilter) {
       case 'À faire':
-        return tasks.filter(task => !task.validated_by);
+        filteredTasks = tasks.filter(task => !task.validated_by);
+        break;
       case 'En cours':
-        return tasks.filter(task => !task.validated_by);
+        filteredTasks = tasks.filter(task => !task.validated_by);
+        break;
       case 'Terminées':
-        return tasks.filter(task => task.validated_by);
+        filteredTasks = tasks.filter(task => task.validated_by);
+        break;
       default:
-        return tasks;
+        filteredTasks = tasks;
     }
-  };
+    
+    // Filtre par recherche
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filteredTasks = filteredTasks.filter(task => 
+        task.title.toLowerCase().includes(query) ||
+        (task.description && task.description.toLowerCase().includes(query))
+      );
+    }
+    
+    return filteredTasks;
+  }, [tasks, activeFilter, searchQuery]);
 
-  const filteredTasks = getFilteredTasks();
+  // 8. Charger les tâches au montage du composant
+  useEffect(() => {
+    fetchUserTasks();
+  }, [fetchUserTasks]);
 
-  const getValidationColor = (validatedBy: number | null) => {
-    return TaskService.getValidationColor(validatedBy);
-  };
+  // 9. Filtres disponibles avec compteurs - optimisé avec useMemo
+  const filters = useMemo(() => [
+    { key: 'Toutes', label: 'Toutes', icon: 'list', count: tasks.length },
+    { key: 'À faire', label: 'À faire', icon: 'time', count: tasks.filter(t => !t.validated_by).length },
+    { key: 'Terminées', label: 'Terminées', icon: 'checkmark-circle', count: tasks.filter(t => t.validated_by).length }
+  ], [tasks]);
 
-  const getValidationIcon = (validatedBy: number | null) => {
-    return TaskService.getValidationIcon(validatedBy);
-  };
+
 
   // Affichage du chargement
   if (loading) {
     return (
       <ProtectedRoute requireAuth={true}>
-        <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={{ marginTop: spacing[4], color: theme.textSecondary, fontSize: 16 }}>
-              Chargement des tâches...
-            </Text>
-            <Text style={{ marginTop: spacing[2], color: theme.textTertiary, fontSize: 14 }}>
-              Récupération de vos tâches en cours
-            </Text>
-          </View>
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
+          <LoadingOverlay 
+            visible={true} 
+            message="Chargement des tâches..." 
+          />
         </View>
       </ProtectedRoute>
     );
@@ -186,256 +215,48 @@ export default function TasksScreen() {
   return (
     <ProtectedRoute requireAuth={true}>
       <View style={{ flex: 1, backgroundColor: theme.background }}>
-        {/* Header */}
+        {/* Header simple */}
         <Header
           title="Mes Tâches"
         />
+        
 
-        {/* Filtres */}
-        <View style={{ paddingHorizontal: spacing[5], marginBottom: spacing[3] }}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={{ paddingRight: spacing[5] }}
-            style={{ height: 32 }}
-          >
-          {[
-            { key: 'Toutes', icon: 'list', count: tasks.length },
-            { key: 'À faire', icon: 'time', count: tasks.filter(t => !t.validated_by).length },
-            { key: 'En cours', icon: 'play', count: tasks.filter(t => !t.validated_by).length },
-            { key: 'Terminées', icon: 'checkmark-circle', count: tasks.filter(t => t.validated_by).length }
-          ].map((filter, index) => (
-            <TouchableOpacity
-              key={filter.key}
-              style={{
-                paddingHorizontal: spacing[3],
-                paddingVertical: 6,
-                borderRadius: 16,
-                backgroundColor: activeFilter === filter.key ? theme.primary : theme.backgroundSecondary,
-                marginRight: spacing[3],
-                flexDirection: 'row',
-                alignItems: 'center',
-                minWidth: 70,
-                justifyContent: 'center',
-                height: 32
-              }}
-              onPress={() => setActiveFilter(filter.key)}
-            >
-              <Ionicons 
-                name={filter.icon as any} 
-                size={14} 
-                color={activeFilter === filter.key ? 'white' : theme.textSecondary}
-                style={{ marginRight: spacing[1] }}
-              />
-              <Text style={{ 
-                color: activeFilter === filter.key ? 'white' : theme.text,
-                fontWeight: activeFilter === filter.key ? '600' : '500',
-                fontSize: 13
-              }}>
-                {filter.key}
-              </Text>
-              <View style={{
-                backgroundColor: activeFilter === filter.key ? 'rgba(255,255,255,0.2)' : theme.border,
-                paddingHorizontal: spacing[1],
-                paddingVertical: 1,
-                borderRadius: 8,
-                marginLeft: spacing[1]
-              }}>
-                <Text style={{
-                  color: activeFilter === filter.key ? 'white' : theme.textSecondary,
-                  fontSize: 11,
-                  fontWeight: '600'
-                }}>
-                  {filter.count}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-          </ScrollView>
+
+
+
+        {/* Barre de recherche et filtres */}
+        <View style={{ marginBottom: spacing[4] }}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Rechercher une tâche..."
+            onSearch={() => {}}
+            compact={true}
+            containerStyle={{ 
+              marginBottom: spacing[3],
+              paddingHorizontal: spacing[5]
+            }}
+          />
+          
+          {/* Filtres optimisés */}
+          <TaskFilters
+            filters={filters}
+            activeFilter={activeFilter}
+            onFilterChange={handleFilterChange}
+            compact={true}
+          />
         </View>
 
-        {/* Liste des tâches */}
-        <ScrollView 
-          style={{ flex: 1, paddingHorizontal: spacing[5] }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-        >
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((task, index) => (
-              <TouchableOpacity
-                key={`task-${task.id}-${index}`}
-                style={{
-                  marginBottom: spacing[3],
-                }}
-                onPress={() => router.push(`/tasks/${task.id}`)}
-                activeOpacity={0.7}
-              >
-                <Card variant="elevated" padding="medium">
-                  <View style={{
-                    borderLeftWidth: 4,
-                    borderLeftColor: getValidationColor(task.validated_by || null),
-                    borderRadius: 2
-                  }}>
-                    <View style={{ paddingLeft: spacing[4] }}>
-                      {/* Header de la tâche */}
-                      <View style={{ 
-                        flexDirection: 'row', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'flex-start', 
-                        marginBottom: spacing[2] 
-                      }}>
-                        <View style={{ flex: 1, marginRight: spacing[3] }}>
-                          <Text style={{ 
-                            fontSize: 16, 
-                            fontWeight: '600', 
-                            color: theme.text,
-                            marginBottom: spacing[1],
-                            lineHeight: 22
-                          }}>
-                            {task.title}
-                          </Text>
-                          
-                                                     {/* Métadonnées de la tâche */}
-                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
-                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                               <View style={{
-                                 width: 8,
-                                 height: 8,
-                                 borderRadius: 4,
-                                 backgroundColor: getValidationColor(task.validated_by || null),
-                                 marginRight: spacing[1]
-                               }} />
-                               <Text style={{ 
-                                 color: theme.textSecondary, 
-                                 fontSize: 12
-                               }}>
-                                 {task.validated_by ? 'Validé' : 'En attente'}
-                               </Text>
-                             </View>
-                           </View>
-                        </View>
-                        
-                        <Badge 
-                          text={task.validated_by ? 'Validé' : 'Non validé'} 
-                          color={getValidationColor(task.validated_by || null)}
-                        />
-                      </View>
-                      
-                      {/* Description */}
-                      {task.description && (
-                        <Text style={{ 
-                          color: theme.textSecondary, 
-                          marginBottom: spacing[3],
-                          lineHeight: 20,
-                          fontSize: 14
-                        }}>
-                          {task.description}
-                        </Text>
-                      )}
-                      
-                      {/* Footer de la tâche */}
-                      <View style={{ 
-                        flexDirection: 'row', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        paddingTop: spacing[2],
-                        borderTopWidth: 1,
-                        borderTopColor: theme.border
-                      }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Ionicons 
-                            name={getValidationIcon(task.validated_by || null) as any} 
-                            size={16} 
-                            color={theme.textSecondary} 
-                          />
-                          <Text style={{ 
-                            color: theme.textSecondary, 
-                            marginLeft: spacing[1],
-                            fontSize: 13
-                          }}>
-                            {task.validated_by ? 'Validé' : 'Non validé'}
-                          </Text>
-                        </View>
-                        
-                                                 {/* Date de création si disponible */}
-                         {task.created_at && (
-                           <Text style={{ 
-                             color: theme.textTertiary, 
-                             fontSize: 12 
-                           }}>
-                             Créée le {new Date(task.created_at).toLocaleDateString('fr-FR')}
-                           </Text>
-                         )}
-                      </View>
-                    </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={{ 
-              flex: 1, 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              paddingVertical: spacing[8],
-              paddingHorizontal: spacing[4]
-            }}>
-              <View style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: theme.backgroundSecondary,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: spacing[4]
-              }}>
-                <Ionicons name="checkbox-outline" size={40} color={theme.textSecondary} />
-              </View>
-              
-              <Text style={{ 
-                fontSize: 18, 
-                fontWeight: '600', 
-                color: theme.text, 
-                marginBottom: spacing[2], 
-                textAlign: 'center' 
-              }}>
-                {activeFilter === 'Toutes' ? 'Aucune tâche' : `Aucune tâche ${activeFilter.toLowerCase()}`}
-              </Text>
-              
-              <Text style={{ 
-                color: theme.textSecondary, 
-                marginBottom: spacing[6], 
-                textAlign: 'center',
-                lineHeight: 22
-              }}>
-                {activeFilter === 'Toutes' 
-                  ? 'Créez votre première tâche pour commencer à organiser votre travail' 
-                  : `Toutes les tâches sont dans d'autres catégories`
-                }
-              </Text>
-              
-              {activeFilter === 'Toutes' && (
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: theme.primary,
-                    paddingHorizontal: spacing[5],
-                    paddingVertical: spacing[3],
-                    borderRadius: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center'
-                  }}
-                //  onPress={() => router.push('/modals/create-task')}
-                >
-                  <Ionicons name="add" size={20} color="white" style={{ marginRight: spacing[2] }} />
-                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>
-                    Créer une tâche
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </ScrollView>
+        {/* Liste des tâches optimisée avec TaskList */}
+        <TaskList
+          tasks={filteredTasks}
+          onTaskPress={(task) => router.push(`/tasks/${task.id}`)}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+          loading={false}
+          activeFilter={activeFilter}
+          style={{ paddingHorizontal: spacing[5] }}
+        />
       </View>
     </ProtectedRoute>
   );
