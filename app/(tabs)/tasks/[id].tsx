@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useTaskContext } from '../../../contexts/TaskContext';
 import { createThemedStyles, spacing } from '../../../styles';
 import { Task } from '../../../types/tasks';
 import { taskService } from '../../../services/TaskService';
@@ -10,16 +11,20 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/atoms/Badge';
 import Header from '../../../components/ui/organisms/Header';
 import ProtectedRoute from '../../../components/ProtectedRoute';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const { updateTask, tasks } = useTaskContext(); // Utiliser le contexte pour synchroniser
   const router = useRouter();
   const themedStyles = createThemedStyles(theme);
   
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Récupérer les détails de la tâche depuis l'API
   const fetchTaskDetails = async () => {
@@ -58,14 +63,134 @@ export default function TaskDetailScreen() {
     fetchTaskDetails();
   }, [id]);
 
-  // Marquer la tâche comme validée (à implémenter dans l'API)
+  // Écouter les changements du contexte pour synchroniser l'état local
+  useEffect(() => {
+    if (task && tasks.length > 0) {
+      const updatedTask = tasks.find(t => t.id === task.id);
+      if (updatedTask && JSON.stringify(updatedTask) !== JSON.stringify(task)) {
+        console.log('🔄 Synchronisation avec le contexte - Mise à jour de la tâche locale');
+        setTask(updatedTask);
+      }
+    }
+  }, [tasks, task]);
+
+  // Marquer la tâche comme validée
   const validateTask = async () => {
-    if (!task) return;
+    if (!task || isUpdating) return;
 
     Alert.alert(
-      'Fonctionnalité à venir',
-      'La validation de tâche sera bientôt disponible via l\'API',
-      [{ text: 'OK' }]
+      'Valider la tâche',
+      'Êtes-vous sûr de vouloir marquer cette tâche comme terminée ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Valider',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              
+              // Mise à jour optimiste immédiate
+              const optimisticTask = { ...task, validated_by: task.owner_id || 1 };
+              setTask(optimisticTask);
+              console.log('🔄 Mise à jour optimiste - Tâche validée localement');
+              
+              const response = await taskService.validateTask(task.id);
+              
+              if (response.success && response.data) {
+                // Mise à jour avec les vraies données de l'API
+                setTask(response.data);
+                console.log('✅ Validation réussie, mise à jour avec données API:', response.data);
+                
+                // Synchroniser avec le contexte pour la liste
+                updateTask(response.data);
+                
+                Alert.alert('Succès', 'Tâche marquée comme terminée !');
+              } else {
+                // En cas d'erreur, revenir à l'état précédent
+                setTask(task);
+                console.log('❌ Erreur validation, retour à l\'état précédent');
+                
+                Alert.alert('Erreur', response.error || 'Impossible de valider la tâche');
+              }
+            } catch (error: any) {
+              // En cas d'erreur réseau, revenir à l'état précédent
+              setTask(task);
+              console.log('❌ Erreur réseau validation, retour à l\'état précédent:', error.message);
+              
+              if (error.response?.status === 403) {
+                Alert.alert('Erreur', 'Vous n\'avez pas les permissions pour valider cette tâche');
+              } else if (error.response?.status === 400) {
+                Alert.alert('Erreur', 'Cette tâche ne peut pas être validée dans son état actuel');
+              } else {
+                Alert.alert('Erreur', 'Erreur lors de la validation');
+              }
+            } finally {
+              setIsUpdating(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Annuler la validation de la tâche
+  const unvalidateTask = async () => {
+    if (!task || isUpdating) return;
+
+    Alert.alert(
+      'Annuler la validation',
+      'Êtes-vous sûr de vouloir annuler la validation de cette tâche ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Annuler la validation',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              
+              // Mise à jour optimiste immédiate
+              const optimisticTask = { ...task, validated_by: null };
+              setTask(optimisticTask);
+              console.log('🔄 Mise à jour optimiste - Validation annulée localement');
+              
+              const response = await taskService.unvalidateTask(task.id);
+              
+              if (response.success && response.data) {
+                // Mise à jour avec les vraies données de l'API
+                setTask(response.data);
+                console.log('✅ Annulation validation réussie, mise à jour avec données API:', response.data);
+                
+                // Synchroniser avec le contexte pour la liste
+                updateTask(response.data);
+                
+                Alert.alert('Succès', 'Validation de la tâche annulée !');
+              } else {
+                // En cas d'erreur, revenir à l'état précédent
+                setTask(task);
+                console.log('❌ Erreur annulation validation, retour à l\'état précédent');
+                
+                Alert.alert('Erreur', response.error || 'Impossible d\'annuler la validation');
+              }
+            } catch (error: any) {
+              // En cas d'erreur réseau, revenir à l'état précédent
+              setTask(task);
+              console.log('❌ Erreur réseau annulation validation, retour à l\'état précédent:', error.message);
+              
+              if (error.response?.status === 403) {
+                Alert.alert('Erreur', 'Vous n\'avez pas les permissions pour annuler la validation de cette tâche');
+              } else if (error.response?.status === 400) {
+                Alert.alert('Erreur', 'Cette tâche ne peut pas être dévalidée dans son état actuel');
+              } else {
+                Alert.alert('Erreur', 'Erreur lors de l\'annulation de la validation');
+              }
+            } finally {
+              setIsUpdating(false);
+            }
+          }
+        }
+      ]
     );
   };
 
@@ -100,6 +225,9 @@ export default function TaskDetailScreen() {
     );
   };
 
+  // Vérifier si l'utilisateur est le propriétaire de la tâche
+  const isOwner = user?.id === task?.owner_id;
+
   // Affichage du chargement
   if (loading) {
     return (
@@ -124,8 +252,6 @@ export default function TaskDetailScreen() {
     return (
       <ProtectedRoute requireAuth={true}>
         <View style={{ flex: 1, backgroundColor: theme.background }}>
-  
-          
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[5] }}>
             <View style={{
               width: 80,
@@ -209,14 +335,17 @@ export default function TaskDetailScreen() {
           title="Détail de la tâche"
           showBack={true}
           onBack={() => router.back()}
-          rightAction={{
+          rightAction={isOwner ? {
+            icon: "trash",
+            onPress: deleteTask
+          } : {
             icon: "create",
-            onPress: () => router.push(`/tasks/create?id=${task.id}`)
+            onPress: () => router.push(`/modals/update-task?id=${task.id}`)
           }}
         />
 
         <ScrollView 
-          style={{ flex: 1, paddingHorizontal: spacing[5] }}
+          style={{ flex: 1, paddingHorizontal: spacing[5], paddingTop: spacing[8] }}
           showsVerticalScrollIndicator={false}
         >
           {/* Titre et statut principal */}
@@ -290,25 +419,25 @@ export default function TaskDetailScreen() {
               borderTopWidth: 1,
               borderTopColor: theme.border
             }}>
-                             <View style={styles.infoRow}>
-                 <Ionicons name="calendar" size={20} color={theme.primary} />
-                 <Text style={styles.infoLabel}>Événement :</Text>
-                 <Text style={styles.infoValue}>#{typeof task.event_id === 'number' ? task.event_id : 'N/A'}</Text>
-               </View>
-               
-               <View style={styles.infoRow}>
-                 <Ionicons name="person" size={20} color={theme.primary} />
-                 <Text style={styles.infoLabel}>Propriétaire :</Text>
-                 <Text style={styles.infoValue}>#{typeof task.owner_id === 'number' ? task.owner_id : 'N/A'}</Text>
-               </View>
-               
-               {task.validated_by && (
-                 <View style={styles.infoRow}>
-                   <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-                   <Text style={styles.infoLabel}>Validée par :</Text>
-                   <Text style={styles.infoValue}>#{typeof task.validated_by === 'number' ? task.validated_by : 'N/A'}</Text>
-                 </View>
-               )}
+              <View style={styles.infoRow}>
+                <Ionicons name="calendar" size={20} color={theme.primary} />
+                <Text style={styles.infoLabel}>Événement :</Text>
+                <Text style={styles.infoValue}>#{typeof task.event_id === 'number' ? task.event_id : 'N/A'}</Text>
+              </View>
+              
+              <View style={styles.infoRow}>
+                <Ionicons name="person" size={20} color={theme.primary} />
+                <Text style={styles.infoLabel}>Propriétaire :</Text>
+                <Text style={styles.infoValue}>#{typeof task.owner_id === 'number' ? task.owner_id : 'N/A'}</Text>
+              </View>
+              
+              {task.validated_by && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                  <Text style={styles.infoLabel}>Validée par :</Text>
+                  <Text style={styles.infoValue}>#{typeof task.validated_by === 'number' ? task.validated_by : 'N/A'}</Text>
+                </View>
+              )}
             </View>
           </Card>
 
@@ -348,7 +477,7 @@ export default function TaskDetailScreen() {
             </Text>
             
             <View style={{ gap: spacing[3] }}>
-              {!task.validated_by && (
+              {!task.validated_by ? (
                 <TouchableOpacity
                   style={{
                     backgroundColor: '#10b981',
@@ -360,10 +489,30 @@ export default function TaskDetailScreen() {
                     justifyContent: 'center'
                   }}
                   onPress={validateTask}
+                  disabled={isUpdating}
                 >
                   <Ionicons name="checkmark-circle" size={20} color="white" style={{ marginRight: spacing[2] }} />
                   <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>
-                    Marquer comme terminée
+                    {isUpdating ? 'Validation...' : 'Marquer comme terminée'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#f59e0b',
+                    paddingVertical: spacing[3],
+                    paddingHorizontal: spacing[4],
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onPress={unvalidateTask}
+                  disabled={isUpdating}
+                >
+                  <Ionicons name="time" size={20} color="white" style={{ marginRight: spacing[2] }} />
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>
+                    {isUpdating ? 'Annulation...' : 'Marquer comme en cours'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -380,7 +529,7 @@ export default function TaskDetailScreen() {
                   borderWidth: 1,
                   borderColor: theme.border
                 }}
-                onPress={() => router.push(`/modals/task-detail?id=${task.id}`)}
+                onPress={() => router.push(`/modals/update-task?id=${task.id}`)}
               >
                 <Ionicons name="create" size={20} color={theme.text} style={{ marginRight: spacing[2] }} />
                 <Text style={{ color: theme.text, fontWeight: '600', fontSize: 16 }}>

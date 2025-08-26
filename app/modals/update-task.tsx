@@ -41,12 +41,9 @@ export default function UpdateTaskModal() {
       setLoading(true);
       setError(null);
       
-      console.log('📋 Récupération des détails de la tâche:', taskId);
-      
       const response = await taskService.getTaskById(Number(taskId));
       
       if (response.success && response.data) {
-        console.log('✅ Détails de la tâche récupérés:', response.data);
         setTask(response.data);
         setFormData({
           title: response.data.title,
@@ -88,12 +85,9 @@ export default function UpdateTaskModal() {
     try {
       setSaving(true);
       
-      console.log('📝 Mise à jour de la tâche:', taskId, formData);
-      
       const response = await taskService.updateTask(task.id, formData);
       
       if (response.success && response.data) {
-        console.log('✅ Tâche mise à jour avec succès:', response.data);
         Alert.alert(
           'Succès', 
           'Tâche mise à jour avec succès !',

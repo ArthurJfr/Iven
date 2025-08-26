@@ -3,6 +3,7 @@ import { View, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useEventContext } from '../../contexts/EventContext';
 import { createThemedStyles, layoutStyles, spacing } from '../../styles';
 import Text from '../../components/ui/atoms/Text';
 import Header from '../../components/ui/organisms/Header';
@@ -14,10 +15,12 @@ import { eventService } from '../../services/EventService';
 import { taskService } from '../../services/TaskService';
 import { Event } from '../../types/events';
 import { Task } from '../../types/tasks';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { events, setEvents } = useEventContext(); // Utiliser le contexte des événements
   const themedStyles = createThemedStyles(theme);
 
   // Utiliser le contexte d'authentification
@@ -135,6 +138,9 @@ export default function HomeScreen() {
     }
   }, [user?.id]);
 
+  // Ajouter le hook des notifications
+  const { notificationCount, refreshNotifications } = useNotifications();
+
   // Fallback si pas d'utilisateur connecté
   if (!user) {
     return (
@@ -169,11 +175,12 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
-      <Header 
-        title={`Iven`}
+      <Header
+        title="Accueil"
         rightAction={{
           icon: "notifications-outline",
-          onPress: () => router.push('/notifications')
+          onPress: () => router.push('/notifications'),
+          notificationCount: notificationCount // Ajouter le nombre de notifications
         }}
       />
 

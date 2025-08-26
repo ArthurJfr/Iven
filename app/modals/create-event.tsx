@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useEventContext } from '../../contexts/EventContext';
 import { createThemedStyles, layoutStyles, spacing } from '../../styles';
 import Text from '../../components/ui/atoms/Text';
 import Input from '../../components/ui/Input';
@@ -27,6 +28,7 @@ const { width } = Dimensions.get('window');
 export default function CreateEventModal() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { addEvent } = useEventContext(); // Utiliser le contexte pour ajouter l'événement
   const themedStyles = createThemedStyles(theme);
 
   const [formData, setFormData] = useState({
@@ -88,13 +90,7 @@ export default function CreateEventModal() {
         return;
       }
 
-      // Debug: Afficher les valeurs reçues
-      console.log(' Debug - Valeurs reçues:', {
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        startTime: formData.startTime,
-        endTime: formData.endTime
-      });
+
 
       // PARSER LES DATES FRANÇAISES (DD/MM/YYYY)
       let startDate: Date;
@@ -190,15 +186,13 @@ export default function CreateEventModal() {
         owner_id: owner_id,
       };
 
-      console.log(' Données de l\'événement à créer:', eventData);
-      console.log('👤 Owner ID récupéré:', owner_id);
-      console.log('📅 Format start_date (MySQL):', startDateTime);
-      console.log('📅 Format end_date (MySQL):', endDateTime);
+
 
       // Appel API pour créer l'événement
       const response = await eventService.createEvent(eventData);
       
       if (response.success) {
+        addEvent(response.data); // Utiliser le contexte pour ajouter l'événement
         Alert.alert('Succès', 'Événement créé avec succès !', [
           { text: 'OK', onPress: () => router.back() }
         ]);

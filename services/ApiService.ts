@@ -35,7 +35,6 @@ class ApiService {
     // Intercepteur de requête
     this.instance.interceptors.request.use(
       (config) => {
-        console.info(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
         return config;
       },
       (error) => {
@@ -47,7 +46,6 @@ class ApiService {
     // Intercepteur de réponse
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => {
-        console.info(`✅ API Response: ${response.status} ${response.config.url}`);
         return response;
       },
       (error) => {
@@ -67,7 +65,6 @@ class ApiService {
    */
   public setAuthToken(token: string) {
     this.instance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    console.info('🔐 Auth token added to API headers');
   }
 
   /**
@@ -75,7 +72,6 @@ class ApiService {
    */
   public removeAuthToken() {
     delete this.instance.defaults.headers.common['Authorization'];
-    console.info('🔓 Auth token removed from API headers');
   }
 
   /**

@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
+import { useTaskContext } from '../../../../contexts/TaskContext';
 import { createThemedStyles, spacing } from '../../../../styles';
 import { Task } from '../../../../types/tasks';
 import { taskService } from '../../../../services/TaskService';
@@ -11,23 +12,22 @@ import Header from '../../../../components/ui/organisms/Header';
 import ProtectedRoute from '../../../../components/ProtectedRoute';
 import { TaskList, TaskFilters } from '../../../../components/features/tasks';
 
-
-
 export default function EventTasksScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { theme } = useTheme();
+  const { updateTask, syncEventTasks, getTasksByEventId } = useTaskContext(); // Utiliser le contexte pour synchroniser les tâches
   const themedStyles = createThemedStyles(theme);
   
+  // 1. Tous les hooks d'état en premier
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('Toutes');
 
-
-  // Récupérer les tâches de l'événement
-  const fetchEventTasks = async () => {
+  // 2. Récupérer les tâches de l'événement
+  const fetchEventTasks = useCallback(async () => {
     if (!id) {
       setError('ID de l\'événement manquant');
       setLoading(false);
@@ -46,6 +46,9 @@ export default function EventTasksScreen() {
       if (response.success && response.data) {
         console.log('✅ Tâches récupérées:', response.data);
         setTasks(response.data);
+        
+        // Synchroniser avec le contexte global
+        syncEventTasks(Number(id), response.data);
       } else {
         console.error('❌ Erreur lors de la récupération des tâches:', response.error);
         setError(response.error || 'Impossible de récupérer les tâches');
@@ -56,25 +59,43 @@ export default function EventTasksScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, syncEventTasks]);
 
-  // Charger les tâches au montage du composant
+  // 3. Charger les tâches au montage du composant
   useEffect(() => {
     fetchEventTasks();
-  }, [id]);
+  }, [fetchEventTasks]);
 
-  // Rafraîchir les tâches quand on revient sur l'écran (après création)
+  // 4. Rafraîchir les tâches quand on revient sur l'écran (après création)
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       if (id) {
         fetchEventTasks();
       }
-    }, [id])
+    }, [id, fetchEventTasks])
   );
 
+  // 5. Écouter les changements du contexte des tâches pour synchroniser l'état local
+  const { tasks: contextTasks } = useTaskContext();
+  useEffect(() => {
+    const eventIdNum = Number(id);
+    const relevantContextTasks = contextTasks.filter(task => task.event_id === eventIdNum);
+    
+    // Vérifier s'il y a des différences entre les tâches locales et celles du contexte
+    if (relevantContextTasks.length > 0 && tasks.length > 0) {
+      const hasChanges = relevantContextTasks.some(contextTask => {
+        const localTask = tasks.find(lt => lt.id === contextTask.id);
+        return localTask && localTask.validated_by !== contextTask.validated_by;
+      });
+      
+      if (hasChanges) {
+        console.log('🔄 Synchronisation avec le contexte des tâches pour l\'événement');
+        setTasks(relevantContextTasks);
+      }
+    }
+  }, [contextTasks, id, tasks.length]); // Retirer 'tasks' des dépendances pour éviter les boucles infinies
 
-
-  // Supprimer une tâche - optimisé avec useCallback
+  // 6. Supprimer une tâche - optimisé avec useCallback
   const deleteTask = useCallback(async (taskId: number) => {
     Alert.alert(
       'Supprimer la tâche',
@@ -89,7 +110,7 @@ export default function EventTasksScreen() {
               const response = await taskService.deleteTask(taskId);
               
               if (response.success) {
-                setTasks(tasks.filter(task => task.id !== taskId));
+                setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
                 Alert.alert('Succès', 'Tâche supprimée avec succès !');
               } else {
                 Alert.alert('Erreur', response.error || 'Impossible de supprimer la tâche');
@@ -101,13 +122,51 @@ export default function EventTasksScreen() {
         }
       ]
     );
-  }, [tasks]);
+  }, []);
 
-  
+  // 7. Fonction de gestion des changements de filtre optimisée
+  const handleFilterChange = useCallback((filter: string) => {
+    setActiveFilter(filter);
+  }, []);
 
+  // 8. Fonction de gestion des mises à jour de tâches optimisée
+  const handleTaskUpdate = useCallback((updatedTask: Task) => {
+    // Mettre à jour l'état local
+    setTasks(prevTasks => prevTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+    
+    // Synchroniser avec le contexte global pour que toutes les autres pages soient mises à jour
+    updateTask(updatedTask);
+    
+    console.log('🔄 Mise à jour dynamique de la tâche dans l\'événement:', updatedTask.title);
+  }, [updateTask]);
 
+  // 9. Fonction de rafraîchissement optimisée
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchEventTasks();
+    setRefreshing(false);
+  }, [fetchEventTasks]);
 
-  // Affichage du chargement
+  // 10. Tâches filtrées selon le filtre actif
+  const filteredTasks = useMemo(() => {
+    switch (activeFilter) {
+      case 'À faire':
+        return tasks.filter(task => !task.validated_by);
+      case 'Terminées':
+        return tasks.filter(task => task.validated_by);
+      default:
+        return tasks;
+    }
+  }, [tasks, activeFilter]);
+
+  // 11. Filtres disponibles avec compteurs
+  const filters = useMemo(() => [
+    { key: 'Toutes', label: 'Toutes', icon: 'apps-outline', count: tasks.length },
+    { key: 'À faire', label: 'À faire', icon: 'time-outline', count: tasks.filter(t => !t.validated_by).length },
+    { key: 'Terminées', label: 'Terminées', icon: 'checkmark-circle-outline', count: tasks.filter(t => t.validated_by).length }
+  ], [tasks]);
+
+  // 12. Rendu conditionnel - TOUJOURS après tous les hooks
   if (loading) {
     return (
       <ProtectedRoute requireAuth={true}>
@@ -126,7 +185,6 @@ export default function EventTasksScreen() {
     );
   }
 
-  // Affichage de l'erreur
   if (error) {
     return (
       <ProtectedRoute requireAuth={true}>
@@ -190,44 +248,7 @@ export default function EventTasksScreen() {
     );
   }
 
-  // Fonction de gestion des changements de filtre optimisée
-  const handleFilterChange = useCallback((filter: string) => {
-    setActiveFilter(filter);
-  }, []);
-
-  // Fonction de gestion des mises à jour de tâches optimisée
-  const handleTaskUpdate = useCallback((updatedTask: Task) => {
-    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-  }, [tasks]);
-
-  // Fonction de rafraîchissement optimisée
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchEventTasks();
-    setRefreshing(false);
-  }, []);
-
-  // Tâches filtrées selon le filtre actif
-  const filteredTasks = useMemo(() => {
-    switch (activeFilter) {
-      case 'À faire':
-        return tasks.filter(task => !task.validated_by);
-      case 'Terminées':
-        return tasks.filter(task => task.validated_by);
-      default:
-        return tasks;
-    }
-  }, [tasks, activeFilter]);
-
-  // Filtres disponibles avec compteurs
-  const filters = useMemo(() => [
-    { key: 'Toutes', label: 'Toutes', icon: 'apps-outline', count: tasks.length },
-    { key: 'À faire', label: 'À faire', icon: 'time-outline', count: tasks.filter(t => !t.validated_by).length },
-    { key: 'Terminées', label: 'Terminées', icon: 'checkmark-circle-outline', count: tasks.filter(t => t.validated_by).length }
-  ], [tasks]);
-
-
-
+  // 13. Rendu principal - TOUJOURS après tous les hooks et conditions
   return (
     <ProtectedRoute requireAuth={true}>
       <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -242,8 +263,6 @@ export default function EventTasksScreen() {
           }}
         />
 
-
-
         {/* Contenu principal avec composants optimisés */}
         <View style={{ flex: 1, paddingTop: spacing[8] }}>
           {/* Filtres des tâches */}
@@ -254,7 +273,7 @@ export default function EventTasksScreen() {
             compact={false}
           />
           
-                    {/* Liste des tâches optimisée */}
+          {/* Liste des tâches optimisée */}
           <TaskList
             tasks={filteredTasks}
             onTaskPress={(task) => router.push(`/tasks/${task.id}`)}

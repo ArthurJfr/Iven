@@ -15,6 +15,7 @@ import {
 } from '../../../components/ui';
 import { TaskCard, TaskList, TaskFilters, TaskStats } from '../../../components/features/tasks';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useTaskContext } from '../../../contexts/TaskContext';
 import { createThemedStyles, spacing } from '../../../styles';
 
 export default function TasksScreen() {
@@ -22,10 +23,10 @@ export default function TasksScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { tasks, setTasks, updateTask } = useTaskContext(); // Utiliser le contexte
   const themedStyles = createThemedStyles(theme);
   
   // 2. Hooks d'état (toujours dans le même ordre)
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export default function TasksScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, fadeAnim]);
+  }, [user?.id, fadeAnim, setTasks]);
 
   // 4. Fonction de rafraîchissement (pull-to-refresh) optimisée
   const handleRefresh = useCallback(async () => {
@@ -86,10 +87,10 @@ export default function TasksScreen() {
     setActiveFilter(filter);
   }, []);
 
-  // 6. Fonction de gestion des mises à jour de tâches optimisée
+  // 6. Fonction de gestion des mises à jour de tâches optimisée et dynamique
   const handleTaskUpdate = useCallback((updatedTask: Task) => {
-    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-  }, [tasks]);
+    updateTask(updatedTask);
+  }, [updateTask]);
 
   // 7. Filtrer les tâches selon le filtre actif et la recherche - optimisé avec useMemo
   const filteredTasks = useMemo(() => {
@@ -127,7 +128,7 @@ export default function TasksScreen() {
     fetchUserTasks();
   }, [fetchUserTasks]);
 
-  // 9. Filtres disponibles avec compteurs - optimisé avec useMemo
+  // 9. Filtres disponibles avec compteurs - optimisé avec useMemo et mis à jour dynamiquement
   const filters = useMemo(() => [
     { key: 'Toutes', label: 'Toutes', icon: 'list', count: tasks.length },
     { key: 'À faire', label: 'À faire', icon: 'time', count: tasks.filter(t => !t.validated_by).length },
@@ -136,19 +137,7 @@ export default function TasksScreen() {
 
 
 
-  // Affichage du chargement
-  if (loading) {
-    return (
-      <ProtectedRoute requireAuth={true}>
-        <View style={{ flex: 1, backgroundColor: theme.background }}>
-          <LoadingOverlay 
-            visible={true} 
-            message="Chargement des tâches..." 
-          />
-        </View>
-      </ProtectedRoute>
-    );
-  }
+
 
   // Affichage de l'erreur
   if (error) {
@@ -251,6 +240,7 @@ export default function TasksScreen() {
         <TaskList
           tasks={filteredTasks}
           onTaskPress={(task) => router.push(`/tasks/${task.id}`)}
+          onTaskUpdate={handleTaskUpdate}
           onRefresh={handleRefresh}
           refreshing={refreshing}
           loading={false}

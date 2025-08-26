@@ -29,25 +29,13 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
       const inAuthGroup = segments[0] === '(auth)';
       const inTabsGroup = segments[0] === '(tabs)';
       
-      console.log('🧭 Navigation check:', { 
-        isAuthenticated, 
-        inAuthGroup, 
-        inTabsGroup, 
-        currentSegment: segments[0],
-        user: isAuthenticated ? 'Connecté' : 'Non connecté',
-        serviceUser: authService.getCurrentUser()?.email || 'Null',
-        serviceToken: authService.getAuthToken() ? 'Présent' : 'Absent'
-      });
-      
       // Ajouter un délai pour éviter les redirections trop rapides
       const navigationTimeout = setTimeout(() => {
         if (isAuthenticated && inAuthGroup) {
           // Utilisateur connecté mais sur une page d'auth → rediriger vers l'app
-          console.log('🔀 Redirection vers l\'app (utilisateur connecté)');
           router.replace('/(tabs)');
         } else if (!isAuthenticated && inTabsGroup) {
           // Utilisateur non connecté mais sur l'app → rediriger vers login
-          console.log('🔀 Redirection vers login (utilisateur non connecté)');
           router.replace('/(auth)/login');
         }
       }, 200); // Délai plus long pour stabilité
@@ -61,7 +49,6 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
     const loadInvitations = async () => {
       if (isAuthenticated && !isLoading) {
         try {
-          console.log('📨 Récupération des invitations...');
           const response = await invitationService.getUserInvitations();
           
           if (response.success && response.data) {
@@ -69,13 +56,7 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
             
             // Vérifier s'il y a des invitations en attente
             const pendingInvitations = response.data.filter(inv => inv.status === 'pending');
-            if (pendingInvitations.length > 0) {
-              console.log(`📨 ${pendingInvitations.length} invitation(s) en attente`);
-            } else {
-              console.log('📨 Aucune invitation en attente');
-            }
           } else {
-            console.log('📨 Aucune invitation trouvée ou erreur:', response.message);
             setInvitations([]);
           }
         } catch (error) {

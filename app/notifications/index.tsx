@@ -41,16 +41,15 @@ export default function NotificationsScreen() {
     
     try {
       const response = await invitationService.getUserInvitations();
-      if (response.success && response.data) {
-        setInvitations(response.data);
-        console.log(`📨 ${response.data.length} invitation(s) chargée(s)`);
-      } else {
+              if (response.success && response.data) {
+          setInvitations(response.data);
+        } else {
+          setInvitations([]);
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des invitations:', error);
         setInvitations([]);
       }
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement des invitations:', error);
-      setInvitations([]);
-    }
   };
 
   // Convertir les invitations en notifications

@@ -50,12 +50,9 @@ export default function CreateTaskModal() {
     try {
       setLoading(true);
       
-      console.log('📋 Création de la tâche:', formData);
-      
       const response = await taskService.createTask(formData);
       
       if (response.success && response.data) {
-        console.log('✅ Tâche créée avec succès:', response.data);
         Alert.alert(
           'Succès', 
           'Tâche créée avec succès !',

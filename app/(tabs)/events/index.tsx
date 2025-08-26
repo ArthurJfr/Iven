@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useEventContext } from '../../../contexts/EventContext';
 import Card from '../../../components/ui/Card';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { eventService } from '../../../services/EventService';
@@ -16,9 +17,9 @@ import { EventList, EventFilters, EventStats } from '../../../components/feature
 export default function EventsListScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { events, setEvents } = useEventContext(); // Utiliser le contexte
   const router = useRouter();
   
-  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);

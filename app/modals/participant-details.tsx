@@ -53,8 +53,6 @@ export default function ParticipantDetailsModal() {
       const eventIdNum = Number(eventId);
       const participantIdNum = Number(participantId);
       
-      console.log('🔍 Récupération des détails du participant:', { eventId: eventIdNum, participantId: participantIdNum });
-      
       // 1. Récupérer les détails de l'utilisateur via l'API
       const userResponse = await userService.getUserById(participantIdNum);
       if (!userResponse.success || !userResponse.data) {
@@ -83,8 +81,6 @@ export default function ParticipantDetailsModal() {
       
       // TODO: Vérifier si l'utilisateur actuel est le propriétaire de l'événement
       setIsOwner(true); // Temporaire
-      
-      console.log('✅ Détails récupérés:', { participant: participantData, user: userResponse.data });
       
     } catch (error: any) {
       console.error('❌ Erreur lors de la récupération des détails:', error);
@@ -144,7 +140,6 @@ export default function ParticipantDetailsModal() {
   const removeParticipant = async () => {
     try {
       // TODO: Appel API pour retirer le participant
-      console.log('Retrait du participant:', participant?.user_id);
       
       Alert.alert('Succès', 'Participant retiré avec succès', [
         { text: 'OK', onPress: () => router.back() }

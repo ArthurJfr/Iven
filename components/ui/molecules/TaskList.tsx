@@ -9,6 +9,7 @@ import { Task } from '../../../types/tasks';
 interface TaskListProps {
   tasks: Task[];
   onTaskPress: (task: Task) => void;
+  onTaskUpdate?: (updatedTask: Task) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
   activeFilter: string;
@@ -19,6 +20,7 @@ interface TaskListProps {
 const TaskList = React.memo(({
   tasks,
   onTaskPress,
+  onTaskUpdate,
   onRefresh,
   refreshing = false,
   activeFilter,
@@ -31,6 +33,11 @@ const TaskList = React.memo(({
   const handleTaskPress = useCallback((task: Task) => {
     onTaskPress(task);
   }, [onTaskPress]);
+
+  // Mémoriser la fonction de mise à jour des tâches
+  const handleTaskUpdate = useCallback((updatedTask: Task) => {
+    onTaskUpdate?.(updatedTask);
+  }, [onTaskUpdate]);
 
   // Mémoriser les états de chargement et vide pour éviter les recalculs
   const loadingState = useMemo(() => (
@@ -61,14 +68,6 @@ const TaskList = React.memo(({
     </View>
   ), [activeFilter, style]);
 
-  if (loading) {
-    return loadingState;
-  }
-
-  if (tasks.length === 0) {
-    return emptyState;
-  }
-
   // Mémoriser le RefreshControl pour éviter les recréations
   const refreshControl = useMemo(() => {
     if (!onRefresh) return undefined;
@@ -83,23 +82,36 @@ const TaskList = React.memo(({
     );
   }, [onRefresh, refreshing, theme.primary]);
 
+  // Mémoriser la liste des tâches pour éviter les recalculs
+  const taskItems = useMemo(() => 
+    tasks.map((task, index) => (
+      <View key={`task-${task.id}-${task.validated_by || 'null'}-${index}`} style={styles.taskItem}>
+        <TaskCard
+          task={task}
+          onPress={() => handleTaskPress(task)}
+          onTaskUpdate={handleTaskUpdate}
+          variant="elevated"
+          compact={false}
+        />
+      </View>
+    )), [tasks, handleTaskPress, handleTaskUpdate]
+  );
+
+  if (loading) {
+    return loadingState;
+  }
+
+  if (tasks.length === 0) {
+    return emptyState;
+  }
+
   return (
     <ScrollView
       style={[styles.container, style]}
       showsVerticalScrollIndicator={false}
       refreshControl={refreshControl}
     >
-      {/* Mémoriser la liste des tâches pour éviter les recalculs */}
-      {useMemo(() => tasks.map((task, index) => (
-        <View key={`task-${task.id}-${index}`} style={styles.taskItem}>
-          <TaskCard
-            task={task}
-            onPress={() => handleTaskPress(task)}
-            variant="elevated"
-            compact={false}
-          />
-        </View>
-      )), [tasks, handleTaskPress])}
+      {taskItems}
       
       {/* Espace en bas pour éviter que le dernier élément soit caché par la barre de navigation */}
       <View style={styles.bottomSpacing} />
@@ -125,12 +137,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[5],
   },
   taskItem: {
-    marginBottom: spacing[3],
+    marginBottom: spacing[4],
   },
   bottomSpacing: {
     height: spacing[8],
   },
 });
 
-// Export par défaut pour maintenir la compatibilité
 export default TaskList;

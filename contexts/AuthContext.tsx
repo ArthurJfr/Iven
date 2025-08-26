@@ -30,19 +30,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
       setIsCheckingToken(true); // Commencer la vérification du token
-      console.log('🚀 Initialisation AuthContext...');
-      
       const sessionRestored = await authService.initialize();
       
       if (sessionRestored) {
         const currentUser = authService.getCurrentUser();
         if (currentUser) {
           setUser(currentUser);
-          console.log('✅ Session restaurée dans AuthContext:', currentUser.email);
         }
       } else {
         setUser(null);
-        console.log('ℹ️ Aucune session valide dans AuthContext');
       }
     } catch (error) {
       console.error('❌ Erreur initialisation AuthContext:', error);
@@ -54,8 +50,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const login = async (userData: User, token: string) => {
-    console.log('✅ Login dans AuthContext:', userData.email);
-    
     // Mettre à jour authService aussi pour maintenir la synchronisation
     authService.setCurrentUser(userData);
     authService.setAuthToken(token);
@@ -71,30 +65,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.persistSession(authData);
     
     setUser(userData);
-    
-    // Debug : vérifier l'état après login
-    console.log('🔄 AuthContext synchronisé avec authService');
-    console.log('🔍 État après login:', {
-      contextUser: userData.email,
-      serviceUser: authService.getCurrentUser()?.email,
-      serviceToken: authService.getAuthToken() ? 'Présent' : 'Absent',
-      isAuth: !!(userData && token)
-    });
   };
 
   const logout = async () => {
     try {
-      console.log('🚪 Logout depuis AuthContext...');
       await authService.logout();
       setUser(null);
-      console.log('✅ Logout terminé dans AuthContext');
     } catch (error) {
       console.error('❌ Erreur logout AuthContext:', error);
     }
   };
 
   const updateUser = (userData: User) => {
-    console.log('🔄 Mise à jour utilisateur dans AuthContext');
     setUser(userData);
   };
 

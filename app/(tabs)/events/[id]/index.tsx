@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../../../contexts/ThemeContext';
+import { useEventContext } from '../../../../contexts/EventContext';
 import { createThemedStyles, layoutStyles, spacing } from '../../../../styles';
 import Text from '../../../../components/ui/atoms/Text';
 import Card from '../../../../components/ui/Card';
@@ -26,6 +27,7 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { events, getEventById, updateEvent } = useEventContext(); // Utiliser le contexte
   const themedStyles = createThemedStyles(theme);
   
   const [event, setEvent] = useState<EnrichedEvent | null>(null);
@@ -285,7 +287,7 @@ export default function EventDetailScreen() {
             </Text>
             <TouchableOpacity onPress={() => router.push(`/events/${id}/participants`)}>
               <Text variant="caption" color="primary">
-                Gérer
+                Voir tous
               </Text>
             </TouchableOpacity>
           </View>
@@ -443,7 +445,7 @@ export default function EventDetailScreen() {
             </Text>
             <TouchableOpacity onPress={() => router.push(`/events/${id}/manage`)}>
               <Text variant="caption" color="primary">
-                Tout gérer
+                Modifier
               </Text>
             </TouchableOpacity>
           </View>

@@ -1,6 +1,5 @@
 import { Stack } from "expo-router";
 import { useTheme } from "../../../contexts/ThemeContext";
-import Debugger from "../../../components/Debugger";
 
 export default function EventsLayout() {
   const { theme } = useTheme();
@@ -22,7 +21,6 @@ export default function EventsLayout() {
           }}
         />
       </Stack>
-      <Debugger isDebugMode={false} />
     </>
   );
 }

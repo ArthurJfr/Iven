@@ -3,8 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from "../../contexts/ThemeContext";
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import BottomBar from '../../components/ui/BottomBar';
-import Debugger from '../../components/Debugger';
-import DevNavigator from '../../components/DevNavigator';
+
 import { createThemedStyles, layoutStyles } from "../../styles";
 import '../../services/LoggerService';
 import React from 'react';
@@ -69,8 +68,6 @@ export default function TabsLayout() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Slot />
-        <Debugger isDebugMode={false} />
-        <DevNavigator isVisible={false} />
       </KeyboardAvoidingView>
       {!shouldHideBottomBar && <BottomBar />}
     </SafeAreaView>

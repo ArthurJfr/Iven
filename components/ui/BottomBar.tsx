@@ -15,7 +15,6 @@ const tabs: TabItem[] = [
   { name: "Accueil", icon: "home", href: "/" },
   { name: "Événements", icon: "calendar", href: "/events" },
   { name: "Tâches", icon: "check-square", href: "/tasks" },
-  { name: "Calendrier", icon: "clock", href: "/calendars" },
   { name: "Profil", icon: "user", href: "/profile" },
 ];
 

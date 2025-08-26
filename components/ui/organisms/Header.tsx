@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Text from '../atoms/Text';
+import NotificationBadge from '../atoms/NotificationBadge';
 import { useTheme } from '../../../contexts/ThemeContext';
 
 interface HeaderProps {
@@ -12,6 +13,7 @@ interface HeaderProps {
   rightAction?: {
     icon: string;
     onPress: () => void;
+    notificationCount?: number; // Nouveau prop pour le nombre de notifications
   };
   onBack?: () => void;
 }
@@ -62,7 +64,16 @@ export default function Header({
         <View style={styles.right}>
           {rightAction && (
             <TouchableOpacity onPress={rightAction.onPress} style={styles.actionButton}>
-              <Ionicons name={rightAction.icon as any} size={24} color={theme.text} />
+              <View style={styles.iconContainer}>
+                <Ionicons name={rightAction.icon as any} size={24} color={theme.text} />
+                {rightAction.notificationCount !== undefined && (
+                  <NotificationBadge 
+                    count={rightAction.notificationCount} 
+                    size="small"
+                    position="top-right"
+                  />
+                )}
+              </View>
             </TouchableOpacity>
           )}
         </View>
@@ -101,5 +112,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 4,
+  },
+  iconContainer: {
+    position: 'relative', // Important pour le positionnement de la pastille
   },
 });
