@@ -31,10 +31,12 @@ class ApiService {
   /**
    * Configuration des intercepteurs Axios
    */
-  private setupInterceptors() {
+  private setupInterceptors(): void {
     // Intercepteur de requête
     this.instance.interceptors.request.use(
       (config) => {
+        // Ajouter un timestamp pour le debugging
+        (config as any).startTime = Date.now();
         return config;
       },
       (error) => {
@@ -46,10 +48,31 @@ class ApiService {
     // Intercepteur de réponse
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => {
+        // Logger le temps de réponse pour le debugging
+        const endTime = Date.now();
+        const startTime = (response.config as any).startTime || endTime;
+        const duration = endTime - startTime;
+        console.debug(`✅ API Response [${response.status}] ${response.config.url} - ${duration}ms`);
         return response;
       },
       (error) => {
-        console.error('❌ API Response Error:', error.response?.status, error.message);
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message;
+        console.error(`❌ API Response Error [${status}]:`, message);
+        
+        // Améliorer le message d'erreur selon le code de statut
+        if (status === 401) {
+          error.userMessage = 'Session expirée. Veuillez vous reconnecter.';
+        } else if (status === 403) {
+          error.userMessage = 'Accès non autorisé.';
+        } else if (status === 404) {
+          error.userMessage = 'Ressource non trouvée.';
+        } else if (status >= 500) {
+          error.userMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+        } else {
+          error.userMessage = message || 'Une erreur est survenue.';
+        }
+        
         return Promise.reject(error);
       }
     );
@@ -58,7 +81,10 @@ class ApiService {
   /**
    * Met à jour l'URL de base de l'API
    */
-
+  public setBaseURL(baseURL: string): void {
+    this.config.baseURL = baseURL;
+    this.instance.defaults.baseURL = baseURL;
+  }
 
   /**
    * Ajoute un token d'authentification aux headers
@@ -142,6 +168,13 @@ class ApiService {
   }
 
   /**
+   * Méthode privée pour formater les erreurs de manière cohérente
+   */
+  private formatError(error: any): string {
+    return error.userMessage || error.response?.data?.message || error.message || 'Une erreur est survenue';
+  }
+
+  /**
    * Requête GET générique
    */
   public async get<T>(url: string, params?: any): Promise<ApiResponse<T>> {
@@ -149,12 +182,13 @@ class ApiService {
       const response = await this.instance.get<T>(url, { params });
       return {
         success: true,
-        data: response.data
+        data: response.data,
+        message: 'Données récupérées avec succès'
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.message || error.message
+        error: this.formatError(error)
       };
     }
   }
@@ -167,12 +201,13 @@ class ApiService {
       const response = await this.instance.post<T>(url, data);
       return {
         success: true,
-        data: response.data
+        data: response.data,
+        message: 'Opération réussie'
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.message || error.message
+        error: this.formatError(error)
       };
     }
   }
@@ -185,12 +220,13 @@ class ApiService {
       const response = await this.instance.put<T>(url, data);
       return {
         success: true,
-        data: response.data
+        data: response.data,
+        message: 'Mise à jour réussie'
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.message || error.message
+        error: this.formatError(error)
       };
     }
   }
@@ -203,12 +239,13 @@ class ApiService {
       const response = await this.instance.delete<T>(url);
       return {
         success: true,
-        data: response.data
+        data: response.data,
+        message: 'Suppression réussie'
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.message || error.message
+        error: this.formatError(error)
       };
     }
   }

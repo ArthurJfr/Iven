@@ -18,6 +18,4 @@ export * from './ui/templates';
 // Composants utilitaires
 export { default as AuthInitializer } from './AuthInitializer';
 export { default as ProtectedRoute } from './ProtectedRoute';
-export { default as DevNavigator } from './DevNavigator';
-export { default as Debugger } from './Debugger';
-export { default as DebuggerView } from './DebuggerView';
+// Note: DevNavigator, Debugger, DebuggerView ne semblent pas exister dans la structure actuelle

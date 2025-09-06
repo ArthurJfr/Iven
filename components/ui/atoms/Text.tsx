@@ -4,7 +4,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { typographyStyles, createThemedStyles } from '../../../styles';
 
 interface TextProps extends RNTextProps {
-  variant?: 'h1' | 'h2' | 'h3' | 'body' | 'caption' | 'small';
+  variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'caption' | 'small';
   color?: 'primary' | 'secondary' | 'tertiary' | 'error' | 'success' | 'warning';
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
 }
@@ -25,6 +25,7 @@ export default function Text({
       case 'h1': return typographyStyles.h1;
       case 'h2': return typographyStyles.h2;
       case 'h3': return typographyStyles.h3;
+      case 'h4': return typographyStyles.h4 || typographyStyles.h3; // Fallback vers h3 si h4 n'existe pas
       case 'body': return typographyStyles.body;
       case 'caption': return typographyStyles.caption;
       case 'small': return typographyStyles.small;

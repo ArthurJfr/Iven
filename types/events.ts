@@ -1,4 +1,7 @@
 // Types de base pour les événements - ADAPTÉS À VOTRE SCHÉMA SIMPLIFIÉ
+// Import du type ApiResponse depuis le module API
+import type { ApiResponse } from './api';
+import type { User } from './users';
 export interface Event {
   id: number; // INT PRIMARY KEY AUTO_INCREMENT
   owner_id: number; // INT NOT NULL
@@ -98,39 +101,10 @@ export interface ParticipantsListResponse {
   participants: EventParticipantWithDetails[];
 }
 
-// Types pour les réponses API génériques
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
 // Types pour les listes
 export interface EventListResponse extends ApiResponse<Event[]> {}
 export interface EventResponse extends ApiResponse<Event> {}
 export interface ParticipantListResponse extends ApiResponse<EventParticipant[]> {}
-
-// Type User harmonisé avec vos routes API
-export interface User {
-  id: number; // INT(11) dans votre DB
-  username: string;
-  fname: string;
-  lname: string;
-  email: string;
-  password?: string; // Généralement omis côté frontend
-  active: number; // tinyint(1) - 0 ou 1 selon vos routes
-  avatar_url?: string;
-  bio?: string;
-  phone?: string;
-  timezone?: string;
-  notification_preferences?: object; // JSON field
-  reset_token?: string;
-  reset_token_expires?: string;
-  confirmation_code?: string;
-  confirmation_code_expires?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 // Types pour les erreurs spécifiques selon vos routes
 export interface EventError {

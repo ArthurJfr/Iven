@@ -1,4 +1,5 @@
 // Types unifiés pour les utilisateurs - ADAPTÉS À VOS ROUTES API
+import type { ApiResponse, QueryParams } from './api';
 
 export interface User {
   id: number; // INT(11) dans votre DB
@@ -38,18 +39,9 @@ export interface UpdatePasswordRequest {
   confirmPassword: string;
 }
 
-// Types pour les réponses API
-export interface UserResponse {
-  success: boolean;
-  data?: User;
-  error?: string;
-}
-
-export interface UserListResponse {
-  success: boolean;
-  data?: User[];
-  error?: string;
-}
+// Types pour les réponses API (utilisation des types génériques)
+export interface UserResponse extends ApiResponse<User> {}
+export interface UserListResponse extends ApiResponse<User[]> {}
 
 export interface UpdateUserResponse {
   message: string;
@@ -80,13 +72,9 @@ export interface UserFilters {
   role?: string;
 }
 
-// Types pour les paramètres de pagination
-export interface UserQueryParams {
-  page?: number;
-  limit?: number;
+// Types pour les paramètres de pagination (extension des types génériques)
+export interface UserQueryParams extends QueryParams {
   sort?: 'username' | 'fname' | 'lname' | 'email' | 'created_at';
-  order?: 'asc' | 'desc';
-  search?: string;
   filters?: UserFilters;
 }
 
