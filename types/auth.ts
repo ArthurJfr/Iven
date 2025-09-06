@@ -1,26 +1,9 @@
 // Types pour l'authentification - ADAPTÉS À VOS ROUTES API
+import type { User } from './users';
+import type { ApiResponse } from './api';
 
-// Type User harmonisé avec vos routes API
-export interface User {
-  id: number; // INT(11) dans votre DB
-  username: string; // VARCHAR(255) NOT NULL
-  fname: string; // VARCHAR(255) NOT NULL
-  lname: string; // VARCHAR(255) NOT NULL
-  email: string; // VARCHAR(255) NOT NULL UNIQUE
-  password?: string; // VARCHAR(255) - Généralement omis côté frontend
-  active: number; // tinyint(1) - 0 ou 1 selon vos routes
-  avatar_url?: string; // VARCHAR(255)
-  bio?: string; // TEXT
-  phone?: string; // VARCHAR(20)
-  timezone?: string; // VARCHAR(50)
-  notification_preferences?: object; // JSON field
-  reset_token?: string; // VARCHAR(255)
-  reset_token_expires?: string; // DATETIME
-  confirmation_code?: string; // VARCHAR(6)
-  confirmation_code_expires?: string; // DATETIME
-  created_at: string; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  updated_at: string; // TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-}
+// Réexporter User pour la compatibilité avec les imports existants
+export type { User };
 
 // Types pour les réponses d'authentification selon vos routes
 export interface RegisterResponse {

@@ -21,6 +21,9 @@ export const lightTheme = {
   primary: colors.primary[500],
   primaryLight: colors.primary[100],
   primaryDark: colors.primary[700],
+  secondary: colors.primary[300], // Couleur secondaire basée sur la primaire
+  accent: colors.primary[600],    // Couleur d'accent
+  info: colors.primary[400],      // Couleur d'information
   
   // Couleurs sémantiques
   success: colors.success[500],
@@ -64,6 +67,10 @@ export const darkTheme = {
   primary: colors.primary[400],
   primaryLight: colors.primary[300],
   primaryDark: colors.primary[600],
+  secondary: colors.primary[200], // Couleur secondaire pour le mode sombre
+  accent: colors.primary[500],    // Couleur d'accent pour le mode sombre
+  info: colors.primary[300],      // Couleur d'information pour le mode sombre
+  
   // Couleurs sémantiques
   success: colors.success[500],
   warning: colors.warning[500], 

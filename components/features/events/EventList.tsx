@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, RefreshControl, StyleSheet } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
 import EventCard from './EventCard';
-import { LoadingOverlay, EmptyState } from '../../shared';
+import { LoadingOverlay, EmptyState } from '../../ui/molecules';
 import { spacing } from '../../../styles';
 import { Event } from '../../../types/events';
 
