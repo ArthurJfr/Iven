@@ -10,6 +10,7 @@ import Text from '../../components/ui/atoms/Text';
 import Card from '../../components/ui/Card';
 import Header from '../../components/ui/organisms/Header';
 import Badge from '../../components/ui/atoms/Badge';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 interface Notification {
   id: string;
@@ -160,34 +161,39 @@ export default function NotificationsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
-        <Header title="Notifications" />
-        <View style={[layoutStyles.centerHorizontal, { paddingTop: spacing[8] }]}>
-          <Ionicons name="notifications-outline" size={64} color={theme.textSecondary} />
-          <Text variant="body" color="secondary">Chargement des notifications...</Text>
-        </View>
-      </SafeAreaView>
+      <ProtectedRoute requireAuth={true}>
+        <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
+          <Header title="Notifications" />
+          <View style={[layoutStyles.centerHorizontal, { paddingTop: spacing[8] }]}> 
+            <Ionicons name="notifications-outline" size={64} color={theme.textSecondary} />
+            <Text variant="body" color="secondary">Chargement des notifications...</Text>
+          </View>
+        </SafeAreaView>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
-      <Header 
-        title="Notifications"
-        rightAction={unreadCount > 0 ? {
-          icon: "checkmark-circle-outline",
-          onPress: markAllAsRead
-        } : undefined}
-      />
+    <ProtectedRoute requireAuth={true}>
+      <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
+        <Header 
+          title="Notifications"
+          onBack={() => router.back()}
+          showBack={true}
+          rightAction={unreadCount > 0 ? {
+            icon: "checkmark-circle-outline",
+            onPress: markAllAsRead
+          } : undefined}
+        />
 
-      <ScrollView 
-        style={layoutStyles.container}
-        contentContainerStyle={{ paddingBottom: spacing[8] }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+        <ScrollView 
+          style={layoutStyles.container}
+          contentContainerStyle={{ paddingBottom: spacing[8] }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
         {/* Badge avec compteur */}
         {unreadCount > 0 && (
           <View style={{ paddingHorizontal: spacing[5], paddingTop: spacing[4], paddingBottom: spacing[2] }}>
@@ -382,8 +388,9 @@ export default function NotificationsScreen() {
             </Text>
           </View>
         )}
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </ProtectedRoute>
   );
 }
 

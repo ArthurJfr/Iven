@@ -53,7 +53,7 @@ export default function EventsTopBar({
       onCreatePress();
     } else {
       // Navigation vers la page de création d'événement
-      router.push('/events/create-event');
+      router.push('/modals/create-event');
     }
   };
 

@@ -46,6 +46,70 @@ const EventFilters = React.memo(({
     onFilterChange(filterKey);
   }, [onFilterChange]);
 
+  // Mémoriser la liste des filtres pour éviter les recalculs
+  const filterButtons = useMemo(() =>
+    filters.map((filter, index) => {
+      const isActive = activeFilter === filter.key;
+      const filterWidth = getFilterWidth();
+      
+      return (
+        <TouchableOpacity
+          key={filter.key}
+          style={[
+            styles.filterButton,
+            {
+              backgroundColor: isActive ? theme.primary : theme.backgroundSecondary,
+              width: filterWidth,
+              height: compact ? 36 : 40,
+              marginRight: index === filters.length - 1 ? 0 : spacing[2],
+            }
+          ]}
+          onPress={() => handleFilterChange(filter.key)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.filterContent}>
+            <Ionicons 
+              name={filter.icon as any} 
+              size={compact ? 12 : 14} 
+              color={isActive ? 'white' : theme.textSecondary}
+              style={styles.filterIcon} 
+            />
+            <Text 
+              style={[
+                styles.filterLabel,
+                {
+                  color: isActive ? 'white' : theme.text,
+                  fontWeight: isActive ? '600' : '500',
+                  fontSize: compact ? 12 : 13
+                }
+              ]}
+              numberOfLines={1}
+            >
+              {filter.label}
+            </Text>
+            <View style={[
+              styles.countBadge,
+              {
+                backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : theme.border,
+              }
+            ]}>
+              <Text style={[
+                styles.countText,
+                {
+                  color: isActive ? 'white' : theme.textSecondary,
+                  fontSize: compact ? 10 : 11
+                }
+              ]}>
+                {filter.count}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }),
+    [filters, activeFilter, compact, theme, getFilterWidth, handleFilterChange]
+  );
+
   return (
     <View style={[styles.container, style]}>
       <ScrollView 
@@ -54,66 +118,7 @@ const EventFilters = React.memo(({
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
       >
-        {/* Mémoriser la liste des filtres pour éviter les recalculs */}
-        {useMemo(() => filters.map((filter, index) => {
-          const isActive = activeFilter === filter.key;
-          const filterWidth = getFilterWidth();
-          
-          return (
-            <TouchableOpacity
-              key={filter.key}
-              style={[
-                styles.filterButton,
-                {
-                  backgroundColor: isActive ? theme.primary : theme.backgroundSecondary,
-                  width: filterWidth,
-                  height: compact ? 36 : 40,
-                  marginRight: index === filters.length - 1 ? 0 : spacing[2],
-                }
-              ]}
-              onPress={() => handleFilterChange(filter.key)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.filterContent}>
-                <Ionicons 
-                  name={filter.icon as any} 
-                  size={compact ? 12 : 14} 
-                  color={isActive ? 'white' : theme.textSecondary}
-                  style={styles.filterIcon} 
-                />
-                <Text 
-                  style={[
-                    styles.filterLabel,
-                    {
-                      color: isActive ? 'white' : theme.text,
-                      fontWeight: isActive ? '600' : '500',
-                      fontSize: compact ? 12 : 13
-                    }
-                  ]}
-                  numberOfLines={1}
-                >
-                  {filter.label}
-                </Text>
-                <View style={[
-                  styles.countBadge,
-                  {
-                    backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : theme.border,
-                  }
-                ]}>
-                  <Text style={[
-                    styles.countText,
-                    {
-                      color: isActive ? 'white' : theme.textSecondary,
-                      fontSize: compact ? 10 : 11
-                    }
-                  ]}>
-                    {filter.count}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        }), [filters, activeFilter, compact, theme, getFilterWidth, handleFilterChange])}
+        {filterButtons}
       </ScrollView>
     </View>
   );

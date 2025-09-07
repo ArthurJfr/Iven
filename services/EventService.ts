@@ -304,6 +304,7 @@ class EventService {
    * Formater une date en format MySQL DATETIME
    */
   static formatToMySQLDateTime(date: Date, time?: string): string {
+    // à supprimer
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -321,6 +322,7 @@ class EventService {
    * Parser une date au format français (DD/MM/YYYY) vers un objet Date
    */
   static parseFrenchDate(frenchDate: string): Date | null {
+    // à supprimer
     try {
       if (frenchDate.includes('/')) {
         const [day, month, year] = frenchDate.split('/');

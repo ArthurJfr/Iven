@@ -161,19 +161,12 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {/* Bio centrée */}
-              <Text variant="body" color="secondary" style={{ 
-                textAlign: 'center', 
-                marginBottom: spacing[5],
-                lineHeight: 20 
-              }}>
-                {user?.bio}
-              </Text>
+              
 
               {/* Boutons d'actions principales */}
               <View style={[layoutStyles.row, { marginBottom: spacing[6] }]}>
                 <TouchableOpacity
-                  onPress={() => router.push('/modals/edit-profile')}
+                  onPress={() => router.push('/modals/update-profile')}
                   style={[
                     {
                       flex: 1,
@@ -236,73 +229,7 @@ export default function ProfileScreen() {
               }} />
 
               {/* Statistiques en grid - reste identique */}
-              <View style={{ width: '100%' }}>
-                <Text variant="h3" weight="semibold" style={{ 
-                  marginBottom: spacing[4],
-                  textAlign: 'center' 
-                }}>
-                  Statistiques
-                </Text>
-                
-                <View style={[layoutStyles.row, { justifyContent: 'space-between' }]}>
-                  <View style={[layoutStyles.centerHorizontal, { flex: 1 }]}>
-                    <View style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
-                      backgroundColor: theme.primary + '15',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginBottom: spacing[2]
-                    }}>
-                      <Text variant="h2" weight="bold" color="primary" style={{ marginBottom: 0 }}>
-                        -
-                      </Text>
-                    </View>
-                    <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-                      Événements{'\n'}créés
-                    </Text>
-                  </View>
 
-                  <View style={[layoutStyles.centerHorizontal, { flex: 1 }]}>
-                    <View style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
-                      backgroundColor: '#34C759' + '15',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginBottom: spacing[2]
-                    }}>
-                      <Text variant="h2" weight="bold" style={{ color: '#34C759', marginBottom: 0 }}>
-                        -
-                      </Text>
-                    </View>
-                    <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-                      Participations
-                    </Text>
-                  </View>
-
-                  <View style={[layoutStyles.centerHorizontal, { flex: 1 }]}>
-                    <View style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
-                      backgroundColor: '#FF9500' + '15',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginBottom: spacing[2]
-                    }}>
-                      <Text variant="h2" weight="bold" style={{ color: '#FF9500', marginBottom: 0 }}>
-                        -
-                      </Text>
-                    </View>
-                    <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-                      Tâches{'\n'}terminées
-                    </Text>
-                  </View>
-                </View>
-              </View>
             </View>
           </Card>
         </View>

@@ -281,6 +281,7 @@ class InvitationService {
    * Obtenir le statut d'une invitation
    */
   getInvitationStatusText(status: string): string {
+    // à supprimer
     switch (status) {
       case 'pending':
         return 'En attente';
@@ -299,6 +300,7 @@ class InvitationService {
    * Obtenir la couleur du statut d'une invitation
    */
   getInvitationStatusColor(status: string): string {
+    // à supprimer
     switch (status) {
       case 'pending':
         return '#f59e0b'; // Orange

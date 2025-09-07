@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, RefreshControl, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../../contexts/ThemeContext';
 import EventCard from './EventCard';
 import { LoadingOverlay, EmptyState } from '../../shared';
@@ -30,6 +31,7 @@ const EventList = React.memo(({
   showParticipants = false
 }: EventListProps) => {
   const { theme } = useTheme();
+  const router = useRouter();
 
   // Mémoriser la fonction de gestion des clics sur les événements
   const handleEventPress = useCallback((event: Event) => {
@@ -68,12 +70,29 @@ const EventList = React.memo(({
         description="Créez votre premier événement pour commencer à organiser vos activités"
         actionButton={{
           text: 'Créer un événement',
-          onPress: () => console.log('Créer un événement'),
+          onPress: () => router.push('/modals/create-event'),
           icon: 'add'
         }}
       />
     </View>
-  ), [style]);
+  ), [style, router]);
+
+  // Mémoriser la liste des événements pour éviter les recalculs
+  const eventItems = useMemo(() =>
+    events.map((event, index) => (
+      <View key={`event-${event.id}-${index}`} style={styles.eventItem}>
+        <EventCard
+          event={event}
+          onPress={onEventPress ? () => handleEventPress(event) : undefined}
+          showLocation={showLocation}
+          showParticipants={showParticipants}
+          compact={compact}
+          variant="elevated"
+        />
+      </View>
+    )),
+    [events, onEventPress, handleEventPress, showLocation, showParticipants, compact]
+  );
 
   if (loading) {
     return loadingState;
@@ -89,19 +108,7 @@ const EventList = React.memo(({
       showsVerticalScrollIndicator={false}
       refreshControl={refreshControl}
     >
-      {/* Mémoriser la liste des événements pour éviter les recalculs */}
-      {useMemo(() => events.map((event, index) => (
-        <View key={`event-${event.id}-${index}`} style={styles.eventItem}>
-          <EventCard
-            event={event}
-            onPress={onEventPress ? () => handleEventPress(event) : undefined}
-            showLocation={showLocation}
-            showParticipants={showParticipants}
-            compact={compact}
-            variant="elevated"
-          />
-        </View>
-      )), [events, onEventPress, handleEventPress, showLocation, showParticipants, compact])}
+      {eventItems}
       
       {/* Espace en bas pour éviter que le dernier élément soit caché par la barre de navigation */}
       <View style={styles.bottomSpacing} />

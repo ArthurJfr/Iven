@@ -31,7 +31,7 @@ export const API_CONFIG = {
   // Endpoints spécifiques
   endpoints: {
     health: '/health',
-    health_protected: '/health/protected',
+    // (retiré) health_protected
     auth: {
       login: '/auth/login',
       register: '/auth/register',
@@ -78,18 +78,21 @@ export const API_CONFIG = {
  * Configurations par environnement
  */
 export const ENVIRONMENT_CONFIGS = {
+  // à supprimer
   development: {
     ...API_CONFIG,
     baseURL: 'http://localhost:3000/api',
     timeout: 15000, // Plus de temps en dev
   },
   
+  // à supprimer
   staging: {
     ...API_CONFIG,
     baseURL: 'https://api-staging.votre-domaine.com/api',
     timeout: 8000,
   },
   
+  // à supprimer
   production: {
     ...API_CONFIG,
     baseURL: 'https://api.votre-domaine.com/api',

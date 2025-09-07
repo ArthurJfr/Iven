@@ -60,4 +60,5 @@ export type {
   CreateCategoryRequest,
   CreateMediaRequest,
   MediaType,
+  // à supprimer: boucle de réexportation de './index' vers './index'
 } from './index';

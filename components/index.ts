@@ -18,6 +18,9 @@ export * from './ui/templates';
 // Composants utilitaires
 export { default as AuthInitializer } from './AuthInitializer';
 export { default as ProtectedRoute } from './ProtectedRoute';
+// à supprimer
 export { default as DevNavigator } from './DevNavigator';
+// à supprimer
 export { default as Debugger } from './Debugger';
+// à supprimer
 export { default as DebuggerView } from './DebuggerView';

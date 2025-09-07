@@ -647,7 +647,7 @@ class AuthService {
   async syncLocalStorage(): Promise<boolean> {
     try {
       if (!this.currentUser || !this.authToken) {
-        console.warn('⚠️ Impossible de synchroniser: utilisateur ou token manquant');
+        //console.warn('⚠️ Impossible de synchroniser: utilisateur ou token manquant');
         return false;
       }
 
@@ -658,10 +658,10 @@ class AuthService {
       };
 
       await this.persistAuthData(authData);
-      console.info('💾 Stockage local synchronisé avec succès');
+      //console.info('💾 Stockage local synchronisé avec succès');
       return true;
     } catch (error) {
-      console.error('❌ Erreur synchronisation stockage local:', error);
+      //console.error('❌ Erreur synchronisation stockage local:', error);
       return false;
     }
   }
@@ -671,13 +671,13 @@ class AuthService {
    */
   async restoreFromLocalStorage(): Promise<boolean> {
     try {
-      console.info('📱 Tentative de restauration depuis le stockage local...');
+      //console.info('📱 Tentative de restauration depuis le stockage local...');
       
       const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
       const storedUserData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
       
       if (!token || !storedUserData) {
-        console.info('ℹ️ Aucune donnée locale disponible pour la restauration');
+        //console.info('ℹ️ Aucune donnée locale disponible pour la restauration');
         return false;
       }
       
@@ -685,7 +685,7 @@ class AuthService {
       
       // Vérifier que les données utilisateur sont valides
       if (!localUser || !localUser.email || !localUser.fname || !localUser.lname) {
-        console.warn('⚠️ Données utilisateur locales incomplètes');
+        //console.warn('⚠️ Données utilisateur locales incomplètes');
         return false;
       }
       
@@ -694,11 +694,11 @@ class AuthService {
       this.authToken = token;
       apiService.setAuthToken(token);
       
-      console.info('✅ Session restaurée depuis le stockage local:', localUser.email);
+      //console.info('✅ Session restaurée depuis le stockage local:', localUser.email);
       return true;
       
     } catch (error) {
-      console.error('❌ Erreur lors de la restauration locale:', error);
+      // console.error('❌ Erreur lors de la restauration locale:', error);
       return false;
     }
   }
@@ -731,7 +731,7 @@ class AuthService {
     return this.currentUser?.active === 1;
   }
 
-
+  
 }
 
 // Instance singleton

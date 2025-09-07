@@ -179,6 +179,7 @@ class TaskService {
    * Formater une date pour l'affichage
    */
   static formatDate(dateString: string): string {
+    // à supprimer
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('fr-FR', {
@@ -196,6 +197,7 @@ class TaskService {
    * Formater une date et heure pour l'affichage
    */
   static formatDateTime(dateString: string): string {
+    // à supprimer
     try {
       const date = new Date(dateString);
       return date.toLocaleString('fr-FR', {
@@ -215,6 +217,7 @@ class TaskService {
    * Obtenir le statut de validation d'une tâche
    */
   static getValidationStatus(validatedBy: number | null): 'pending' | 'validated' {
+    // à supprimer
     return validatedBy ? 'validated' : 'pending';
   }
 
@@ -222,6 +225,7 @@ class TaskService {
    * Obtenir l'icône de statut de validation
    */
   static getValidationIcon(validatedBy: number | null): string {
+    // à supprimer
     return validatedBy ? 'checkmark-circle' : 'ellipse-outline';
   }
 
@@ -229,6 +233,7 @@ class TaskService {
    * Obtenir la couleur de statut de validation
    */
   static getValidationColor(validatedBy: number | null): string {
+    // à supprimer
     return validatedBy ? '#34C759' : '#FF9500';
   }
 
@@ -236,6 +241,7 @@ class TaskService {
    * Obtenir le texte de statut de validation
    */
   static getValidationText(validatedBy: number | null): string {
+    // à supprimer
     return validatedBy ? 'Validée' : 'En attente';
   }
 

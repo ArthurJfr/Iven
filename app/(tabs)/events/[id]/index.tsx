@@ -27,7 +27,7 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { user } = useAuth();
-  const { events, getEventById, updateEvent } = useEventContext(); // Utiliser le contexte
+  const { events, getEventById, updateEvent, removeEvent } = useEventContext(); // Utiliser le contexte
   const themedStyles = createThemedStyles(theme);
   
   const [event, setEvent] = useState<EnrichedEvent | null>(null);
@@ -138,7 +138,7 @@ export default function EventDetailScreen() {
   // Actions secondaires
   const secondaryActions = [
     { title: 'Médias', icon: 'images-outline', route: `/events/${id}/media`, color: '#8B5CF6' },
-    { title: 'Gérer', icon: 'settings-outline', route: `/events/${id}/manage`, color: '#6B7280' },
+    { title: 'Gérer', icon: 'settings-outline', route: `/modals/update-event?id=${id}`, color: '#6B7280' },
   ];
 
   // Affichage du chargement
@@ -181,15 +181,48 @@ export default function EventDetailScreen() {
 
   const statusConfig = getStatusConfig(event.start_date, event.end_date);
 
+  const isOwner = user?.id === event.owner_id;
+
+  const handleDeleteEvent = () => {
+    if (!id) return;
+    Alert.alert(
+      "Supprimer l'événement",
+      "Êtes-vous sûr de vouloir supprimer cet événement ? Cette action est irréversible.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await eventService.deleteEvent(Number(id));
+              if (response.success) {
+                removeEvent(Number(id));
+                Alert.alert('Succès', "Événement supprimé", [
+                  { text: 'OK', onPress: () => router.replace('/events') }
+                ]);
+              } else {
+                Alert.alert('Erreur', response.error || "Impossible de supprimer l'événement");
+              }
+            } catch (e) {
+              Alert.alert('Erreur', 'Erreur lors de la suppression');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={[layoutStyles.container, themedStyles.surface]}>
       <Header
         title={event.title}
         showBack
-        rightAction={{
-          icon: "ellipsis-horizontal",
-          onPress: () => router.push(`/events/${id}/manage`)
-        }}
+        rightAction={isOwner ? {
+          icon: "trash",
+          onPress: handleDeleteEvent
+        } : undefined}
+        onBack={() => router.back()}
       />
 
       <ScrollView 
@@ -206,7 +239,7 @@ export default function EventDetailScreen() {
             <Text variant="h3" weight="semibold">
               Informations
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push(`/modals/update-event?id=${id}`)}>
               <Text variant="caption" color="primary">
                 Modifier
               </Text>
@@ -428,7 +461,7 @@ export default function EventDetailScreen() {
                 </Text>
                 <TouchableOpacity 
                   style={{ marginTop: spacing[3] }}
-                  onPress={() => router.push(`/events/${id}/tasks`)}
+                  onPress={() => router.push(`/modals/create-task?eventId=${id}`)}
                 >
                   <Text variant="small" color="primary">
                     Créer une première tâche
@@ -443,7 +476,7 @@ export default function EventDetailScreen() {
             <Text variant="h3" weight="semibold">
               Gestion
             </Text>
-            <TouchableOpacity onPress={() => router.push(`/events/${id}/manage`)}>
+            <TouchableOpacity onPress={() => router.push(`/modals/update-event?id=${id}`)}>
               <Text variant="caption" color="primary">
                 Modifier
               </Text>
@@ -489,7 +522,7 @@ export default function EventDetailScreen() {
             ))}
 
             {/* Action "Gérer" intégrée dans la section Gestion */}
-            <TouchableOpacity onPress={() => router.push(`/events/${id}/manage`)}>
+            <TouchableOpacity onPress={() => router.push(`/modals/update-event?id=${id}`)}>
               <Card variant="outlined" padding="medium">
                 <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
                   <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
