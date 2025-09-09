@@ -134,7 +134,7 @@ export default function EventParticipantsScreen() {
     }
     
     // Navigation vers la modal d'ajout de participant
-    router.push(`/modals/add-participant?id=${id}`);
+    router.push(`/modals/add-participant?eventId=${id}`);
   };
 
   if (loading) {

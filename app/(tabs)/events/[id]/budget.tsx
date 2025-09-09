@@ -1,564 +1,496 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, TouchableOpacity, SafeAreaView, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { createThemedStyles, layoutStyles, spacing } from '../../../../styles';
+import Text from '../../../../components/ui/atoms/Text';
 import Card from '../../../../components/ui/Card';
 import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
-import { useTheme } from '../../../../contexts/ThemeContext';
+import Header from '../../../../components/ui/organisms/Header';
+import Badge from '../../../../components/ui/atoms/Badge';
+import { Event } from '../../../../types/events';
+import { eventService } from '../../../../services/EventService';
+import { useAuth } from '../../../../contexts/AuthContext';
 
-const { width } = Dimensions.get('window');
-
-interface Expense {
+// Types pour le budget
+interface BudgetItem {
   id: number;
-  title: string;
-  amount: number;
-  paidBy: string;
+  event_id: number;
   category: string;
-  date: string;
-  description?: string;
+  description: string;
+  amount: number;
+  paid_by: number;
+  paid_by_name: string;
+  created_at: string;
+  updated_at: string;
 }
 
-interface Budget {
-  total: number;
-  spent: number;
-  remaining: number;
-  contributions: { [key: string]: number };
+interface BudgetSummary {
+  total_budget: number;
+  total_spent: number;
+  remaining_budget: number;
+  items_count: number;
+}
+
+interface BudgetStats {
+  by_category: { [key: string]: number };
+  by_participant: { [key: string]: number };
 }
 
 export default function EventBudgetScreen() {
+  console.log('💰 EventBudgetScreen rendu');
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const themedStyles = createThemedStyles(theme);
   
-  const [budget, setBudget] = useState<Budget>({
-    total: 150,
-    spent: 80,
-    remaining: 70,
-    contributions: {
-      'Marie': 30,
-      'Jean': 25,
-      'Sophie': 25
-    }
-  });
+  const [event, setEvent] = useState<Event | null>(null);
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
+  const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null);
+  const [budgetStats, setBudgetStats] = useState<BudgetStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Toutes');
 
-  const [expenses, setExpenses] = useState<Expense[]>([
-    {
-      id: 1,
-      title: "Gâteau d'anniversaire",
-      amount: 25,
-      paidBy: "Marie",
-      category: "Nourriture",
-      date: "2024-03-14",
-      description: "Gâteau au chocolat de la pâtisserie"
-    },
-    {
-      id: 2,
-      title: "Décorations",
-      amount: 35,
-      paidBy: "Jean",
-      category: "Décoration",
-      date: "2024-03-13",
-      description: "Ballons, guirlandes et accessoires"
-    },
-    {
-      id: 3,
-      title: "Boissons",
-      amount: 20,
-      paidBy: "Sophie",
-      category: "Nourriture",
-      date: "2024-03-14"
-    }
-  ]);
+  // Catégories de budget prédéfinies
+  const budgetCategories = [
+    'Toutes',
+    'Nourriture',
+    'Transport',
+    'Hébergement',
+    'Matériel',
+    'Décoration',
+    'Divertissement',
+    'Autres'
+  ];
 
-  const [showAddExpense, setShowAddExpense] = useState(false);
-  const [newExpense, setNewExpense] = useState({
-    title: '',
-    amount: '',
-    paidBy: '',
-    category: '',
-    description: ''
-  });
-
-  const categories = ['Nourriture', 'Décoration', 'Transport', 'Loisirs', 'Autre'];
-
-  const addExpense = () => {
-    if (!newExpense.title || !newExpense.amount || !newExpense.paidBy) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
+  // Récupérer les données du budget
+  const fetchBudgetData = async () => {
+    if (!id || !user?.id) {
+      setError('ID d\'événement ou utilisateur manquant');
+      setLoading(false);
       return;
     }
 
-    const amount = parseFloat(newExpense.amount);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Erreur', 'Le montant doit être un nombre positif');
-      return;
-    }
-
-    const expense: Expense = {
-      id: Date.now(),
-      title: newExpense.title,
-      amount,
-      paidBy: newExpense.paidBy,
-      category: newExpense.category || 'Autre',
-      date: new Date().toISOString().split('T')[0],
-      description: newExpense.description
-    };
-
-    setExpenses([...expenses, expense]);
-    
-    // Mettre à jour le budget
-    const newSpent = budget.spent + amount;
-    const newRemaining = budget.total - newSpent;
-    
-    setBudget({
-      ...budget,
-      spent: newSpent,
-      remaining: newRemaining
-    });
-
-    // Réinitialiser le formulaire
-    setNewExpense({
-      title: '',
-      amount: '',
-      paidBy: '',
-      category: '',
-      description: ''
-    });
-    setShowAddExpense(false);
-  };
-
-  const deleteExpense = (expenseId: number) => {
-    Alert.alert(
-      'Supprimer la dépense',
-      'Êtes-vous sûr de vouloir supprimer cette dépense ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Supprimer', 
-          style: 'destructive',
-          onPress: () => {
-            const expense = expenses.find(e => e.id === expenseId);
-            if (expense) {
-              setExpenses(expenses.filter(e => e.id !== expenseId));
-              
-              // Mettre à jour le budget
-              const newSpent = budget.spent - expense.amount;
-              const newRemaining = budget.total - newSpent;
-              
-              setBudget({
-                ...budget,
-                spent: newSpent,
-                remaining: newRemaining
-              });
-            }
-          }
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const eventId = Number(id);
+      console.log('💰 Récupération des données du budget:', eventId);
+      
+      // Récupérer l'événement
+      const eventResponse = await eventService.getEventById(eventId);
+      if (!eventResponse.success || !eventResponse.data) {
+        throw new Error(eventResponse.error || 'Erreur lors de la récupération de l\'événement');
+      }
+      const eventData = eventResponse.data;
+      // Créer un objet Event complet avec la propriété participants requise
+      const completeEvent: Event = {
+        ...eventData,
+        participants: [] // Ajouter la propriété participants manquante
+      };
+      setEvent(completeEvent);
+      setIsOwner(eventData.owner_id === user.id);
+      
+      // Simuler les données du budget (à remplacer par des appels API réels)
+      const mockBudgetItems: BudgetItem[] = [
+        {
+          id: 1,
+          event_id: eventId,
+          category: 'Nourriture',
+          description: 'Repas pour 20 personnes',
+          amount: 150.00,
+          paid_by: user.id,
+          paid_by_name: user.fname + ' ' + user.lname,
+          created_at: '2024-01-15 10:00:00',
+          updated_at: '2024-01-15 10:00:00'
+        },
+        {
+          id: 2,
+          event_id: eventId,
+          category: 'Transport',
+          description: 'Location de bus',
+          amount: 200.00,
+          paid_by: user.id,
+          paid_by_name: user.fname + ' ' + user.lname,
+          created_at: '2024-01-16 14:30:00',
+          updated_at: '2024-01-16 14:30:00'
+        },
+        {
+          id: 3,
+          event_id: eventId,
+          category: 'Décoration',
+          description: 'Ballons et guirlandes',
+          amount: 75.50,
+          paid_by: user.id,
+          paid_by_name: user.fname + ' ' + user.lname,
+          created_at: '2024-01-17 09:15:00',
+          updated_at: '2024-01-17 09:15:00'
         }
-      ]
-    );
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Nourriture': return '#10B981';
-      case 'Décoration': return '#F59E0B';
-      case 'Transport': return '#3B82F6';
-      case 'Loisirs': return '#8B5CF6';
-      default: return '#6B7280';
+      ];
+      
+      setBudgetItems(mockBudgetItems);
+      
+      // Calculer le résumé du budget
+      const totalSpent = mockBudgetItems.reduce((sum, item) => sum + item.amount, 0);
+      const totalBudget = 1000.00; // Budget total fixe pour l'exemple
+      
+      setBudgetSummary({
+        total_budget: totalBudget,
+        total_spent: totalSpent,
+        remaining_budget: totalBudget - totalSpent,
+        items_count: mockBudgetItems.length
+      });
+      
+      // Calculer les statistiques
+      const byCategory: { [key: string]: number } = {};
+      const byParticipant: { [key: string]: number } = {};
+      
+      mockBudgetItems.forEach(item => {
+        byCategory[item.category] = (byCategory[item.category] || 0) + item.amount;
+        byParticipant[item.paid_by_name] = (byParticipant[item.paid_by_name] || 0) + item.amount;
+      });
+      
+      setBudgetStats({
+        by_category: byCategory,
+        by_participant: byParticipant
+      });
+      
+      console.log('✅ Données du budget récupérées avec succès');
+      
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la récupération du budget:', error);
+      setError(error.message || 'Erreur lors de la récupération du budget');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getTotalByCategory = () => {
-    const totals: { [key: string]: number } = {};
-    expenses.forEach(expense => {
-      totals[expense.category] = (totals[expense.category] || 0) + expense.amount;
-    });
-    return totals;
+  // Actualiser les données
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchBudgetData();
+    setRefreshing(false);
   };
 
-  const categoryTotals = getTotalByCategory();
+  // Charger les données au montage du composant
+  useEffect(() => {
+    fetchBudgetData();
+  }, [id, user?.id]);
+
+  // Filtrer les éléments par catégorie
+  const filteredItems = selectedCategory === 'Toutes' 
+    ? budgetItems 
+    : budgetItems.filter(item => item.category === selectedCategory);
+
+  // Formater le montant en euros
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  };
+
+  // Obtenir la couleur de la catégorie
+  const getCategoryColor = (category: string) => {
+    const colors: { [key: string]: string } = {
+      'Nourriture': '#FF6B6B',
+      'Transport': '#4ECDC4',
+      'Hébergement': '#45B7D1',
+      'Matériel': '#96CEB4',
+      'Décoration': '#FFEAA7',
+      'Divertissement': '#DDA0DD',
+      'Autres': '#98D8C8'
+    };
+    return colors[category] || theme.primary;
+  };
+
+  // Obtenir l'icône de la catégorie
+  const getCategoryIcon = (category: string) => {
+    const icons: { [key: string]: string } = {
+      'Nourriture': 'restaurant',
+      'Transport': 'car',
+      'Hébergement': 'bed',
+      'Matériel': 'construct',
+      'Décoration': 'color-palette',
+      'Divertissement': 'musical-notes',
+      'Autres': 'ellipsis-horizontal'
+    };
+    return icons[category] || 'ellipsis-horizontal';
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[layoutStyles.container, { backgroundColor: theme.background }]}>
+        <Header
+          title="Budget"
+        />
+        <View style={[layoutStyles.center, { flex: 1 }]}>
+          <Text variant="body" color="secondary">Chargement du budget...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={[layoutStyles.container, { backgroundColor: theme.background }]}>
+        <Header
+          title="Budget"
+          showBack
+          onBack={() => router.back()}
+        />
+        <View style={[layoutStyles.center, { flex: 1, paddingHorizontal: spacing[5] }]}>
+          <Ionicons name="alert-circle" size={48} color={theme.error} />
+          <Text variant="h3" weight="semibold" style={{ marginTop: spacing[3], marginBottom: spacing[2] }}>
+            Erreur
+          </Text>
+          <Text variant="body" color="secondary" style={{ textAlign: 'center', marginBottom: spacing[4] }}>
+            {error}
+          </Text>
+          <Button
+            title="Réessayer"
+            onPress={fetchBudgetData}
+            variant="primary"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: theme.background }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Budget de l'événement</Text>
-        <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: theme.background }]}
-          onPress={() => setShowAddExpense(!showAddExpense)}
-        >
-          <Ionicons 
-            name={showAddExpense ? "close" : "add"} 
-            size={20} 
-            color={theme.text} 
-          />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={[layoutStyles.container, { backgroundColor: theme.background }]}>
+      <Header
+        title="Budget"
+        showBack
+        onBack={() => router.back()}
+        rightAction={
+          {
+            icon: "add",
+            onPress: () => console.log('Ajouter dépense')
+          }
+        }
+        />
+      
 
-      {showAddExpense && (
-        <Card style={styles.addForm}>
-          <Text style={styles.formTitle}>Nouvelle dépense</Text>
-          <Input
-            placeholder="Titre de la dépense"
-            value={newExpense.title}
-            onChangeText={(text) => setNewExpense({...newExpense, title: text})}
-            style={styles.input}
-          />
-          <Input
-            placeholder="Montant (€)"
-            value={newExpense.amount}
-            onChangeText={(text) => setNewExpense({...newExpense, amount: text})}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-          <Input
-            placeholder="Payé par"
-            value={newExpense.paidBy}
-            onChangeText={(text) => setNewExpense({...newExpense, paidBy: text})}
-            style={styles.input}
-          />
-          <View style={styles.categoryContainer}>
-            <Text style={styles.categoryLabel}>Catégorie :</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  style={[
-                    styles.categoryButton,
-                    newExpense.category === category && styles.categoryButtonSelected
-                  ]}
-                  onPress={() => setNewExpense({...newExpense, category})}
-                >
-                  <Text style={[
-                    styles.categoryButtonText,
-                    newExpense.category === category && styles.categoryButtonTextSelected
-                  ]}>
-                    {category}
+      <ScrollView 
+        style={{ flex: 1 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={{ paddingHorizontal: spacing[5], paddingTop: spacing[4] }}>
+          
+          {/* Résumé du budget */}
+          {budgetSummary && (
+            <Card variant="elevated" padding="medium" style={{ marginBottom: spacing[4] }}>
+              <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[4] }}>
+                Résumé du budget
+              </Text>
+              
+              <View style={[layoutStyles.rowBetween, { marginBottom: spacing[3] }]}>
+                <Text variant="body" color="secondary">Budget total</Text>
+                <Text variant="h3" weight="semibold" color="primary">
+                  {formatAmount(budgetSummary.total_budget)}
+                </Text>
+              </View>
+              
+              <View style={[layoutStyles.rowBetween, { marginBottom: spacing[3] }]}>
+                <Text variant="body" color="secondary">Dépensé</Text>
+                <Text variant="h3" weight="semibold" color="error">
+                  {formatAmount(budgetSummary.total_spent)}
+                </Text>
+              </View>
+              
+              <View style={[layoutStyles.rowBetween, { marginBottom: spacing[3] }]}>
+                <Text variant="body" color="secondary">Restant</Text>
+                <Text variant="h3" weight="semibold" color={budgetSummary.remaining_budget >= 0 ? 'success' : 'error'}>
+                  {formatAmount(budgetSummary.remaining_budget)}
+                </Text>
+              </View>
+              
+              {/* Barre de progression */}
+              <View style={{ marginTop: spacing[3] }}>
+                <View style={{
+                  height: 8,
+                  backgroundColor: theme.border,
+                  borderRadius: 4,
+                  overflow: 'hidden'
+                }}>
+                  <View style={{
+                    height: '100%',
+                    width: `${Math.min((budgetSummary.total_spent / budgetSummary.total_budget) * 100, 100)}%`,
+                    backgroundColor: budgetSummary.total_spent > budgetSummary.total_budget ? theme.error : theme.primary,
+                    borderRadius: 4
+                  }} />
+                </View>
+                <Text variant="caption" color="secondary" style={{ marginTop: spacing[1] }}>
+                  {Math.round((budgetSummary.total_spent / budgetSummary.total_budget) * 100)}% du budget utilisé
+                </Text>
+              </View>
+            </Card>
+          )}
+
+          {/* Statistiques par catégorie */}
+          {budgetStats && (
+            <Card variant="elevated" padding="medium" style={{ marginBottom: spacing[4] }}>
+              <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[4] }}>
+                Dépenses par catégorie
+              </Text>
+              
+              {Object.entries(budgetStats.by_category).map(([category, amount]) => (
+                <View key={category} style={[layoutStyles.rowBetween, { marginBottom: spacing[2] }]}>
+                  <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
+                    <View style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: 6,
+                      backgroundColor: getCategoryColor(category),
+                      marginRight: spacing[2]
+                    }} />
+                    <Text variant="body">{category}</Text>
+                  </View>
+                  <Text variant="body" weight="semibold">
+                    {formatAmount(amount)}
                   </Text>
-                </TouchableOpacity>
+                </View>
               ))}
+            </Card>
+          )}
+
+          {/* Filtres par catégorie */}
+          <View style={{ marginBottom: spacing[4] }}>
+            <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[3] }}>
+              Catégories
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={[layoutStyles.row, { gap: spacing[2] }]}>
+                {budgetCategories.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    onPress={() => setSelectedCategory(category)}
+                    style={{
+                      paddingHorizontal: spacing[3],
+                      paddingVertical: spacing[2],
+                      borderRadius: 20,
+                      backgroundColor: selectedCategory === category ? theme.primary : theme.backgroundSecondary,
+                      borderWidth: 1,
+                      borderColor: selectedCategory === category ? theme.primary : theme.border
+                    }}
+                  >
+                    <Text 
+                      variant="caption" 
+                      weight={selectedCategory === category ? 'semibold' : 'normal'}
+                      color={selectedCategory === category ? 'primary' : 'secondary'}
+                    >
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </ScrollView>
           </View>
-          <Input
-            placeholder="Description (optionnel)"
-            value={newExpense.description}
-            onChangeText={(text) => setNewExpense({...newExpense, description: text})}
-            multiline
-            style={styles.input}
-          />
-          <View style={styles.formButtons}>
-            <Button 
-              title="Annuler" 
-              onPress={() => setShowAddExpense(false)}
-              style={[styles.formButton, styles.cancelButton]}
-            />
-            <Button 
-              title="Ajouter" 
-              onPress={addExpense}
-              style={styles.formButton}
-            />
-          </View>
-        </Card>
-      )}
 
-      <ScrollView style={styles.content}>
-        {/* Résumé du budget */}
-        <Card style={styles.budgetSummary}>
-          <Text style={styles.sectionTitle}>Résumé du budget</Text>
-          <View style={styles.budgetRow}>
-            <Text style={styles.budgetLabel}>Budget total :</Text>
-            <Text style={styles.budgetValue}>{budget.total}€</Text>
-          </View>
-          <View style={styles.budgetRow}>
-            <Text style={styles.budgetLabel}>Dépensé :</Text>
-            <Text style={[styles.budgetValue, { color: '#EF4444' }]}>{budget.spent}€</Text>
-          </View>
-          <View style={styles.budgetRow}>
-            <Text style={styles.budgetLabel}>Restant :</Text>
-            <Text style={[styles.budgetValue, { color: budget.remaining >= 0 ? '#10B981' : '#EF4444' }]}>
-              {budget.remaining}€
-            </Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(budget.spent / budget.total) * 100}%` }]} />
-          </View>
-        </Card>
-
-        {/* Contributions par personne */}
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Contributions par personne</Text>
-          {Object.entries(budget.contributions).map(([name, amount]) => (
-            <View key={name} style={styles.contributionRow}>
-              <Text style={styles.contributionName}>{name}</Text>
-              <Text style={styles.contributionAmount}>{amount}€</Text>
+          {/* Liste des dépenses */}
+          <View>
+            <View style={[layoutStyles.rowBetween, { marginBottom: spacing[3] }]}>
+              <Text variant="h3" weight="semibold">
+                Dépenses ({filteredItems.length})
+              </Text>
+              {isOwner && (
+                <TouchableOpacity onPress={() => console.log('Ajouter dépense')}>
+                  <Text variant="body" color="primary">Ajouter</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          ))}
-        </Card>
 
-        {/* Dépenses par catégorie */}
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Dépenses par catégorie</Text>
-          {Object.entries(categoryTotals).map(([category, total]) => (
-            <View key={category} style={styles.categoryRow}>
-              <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category) }]} />
-              <Text style={styles.categoryName}>{category}</Text>
-              <Text style={styles.categoryTotal}>{total}€</Text>
-            </View>
-          ))}
-        </Card>
-
-        {/* Liste des dépenses */}
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Détail des dépenses</Text>
-          {expenses.map((expense) => (
-            <View key={expense.id} style={styles.expenseCard}>
-              <View style={styles.expenseHeader}>
-                <View style={styles.expenseInfo}>
-                  <Text style={styles.expenseTitle}>{expense.title}</Text>
-                  <Text style={styles.expenseDate}>{expense.date}</Text>
-                  {expense.description && (
-                    <Text style={styles.expenseDescription}>{expense.description}</Text>
+            {filteredItems.length === 0 ? (
+              <Card variant="outlined" padding="large">
+                <View style={[layoutStyles.center, { paddingVertical: spacing[6] }]}>
+                  <Ionicons name="receipt-outline" size={48} color={theme.textSecondary} />
+                  <Text variant="h3" weight="semibold" style={{ marginTop: spacing[3], marginBottom: spacing[2] }}>
+                    Aucune dépense
+                  </Text>
+                  <Text variant="body" color="secondary" style={{ textAlign: 'center', marginBottom: spacing[4] }}>
+                    {selectedCategory === 'Toutes' 
+                      ? 'Aucune dépense enregistrée pour cet événement'
+                      : `Aucune dépense dans la catégorie "${selectedCategory}"`
+                    }
+                  </Text>
+                  {isOwner && (
+                    <Button
+                      title="Ajouter une dépense"
+                      onPress={() => console.log('Ajouter dépense')}
+                      variant="primary"
+                    />
                   )}
                 </View>
-                <View style={styles.expenseActions}>
-                  <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(expense.category) }]}>
-                    <Text style={styles.categoryBadgeText}>{expense.category}</Text>
-                  </View>
-                  <Text style={styles.expenseAmount}>{expense.amount}€</Text>
-                  <TouchableOpacity 
-                    style={styles.deleteButton}
-                    onPress={() => deleteExpense(expense.id)}
-                  >
-                    <Text style={styles.deleteButtonText}>×</Text>
-                  </TouchableOpacity>
-                </View>
+              </Card>
+            ) : (
+              <View style={{ gap: spacing[3] }}>
+                {filteredItems.map((item) => (
+                  <Card key={item.id} variant="elevated" padding="medium">
+                    <View style={[layoutStyles.rowBetween, { alignItems: 'flex-start', marginBottom: spacing[2] }]}>
+                      <View style={[layoutStyles.row, { alignItems: 'center', flex: 1 }]}>
+                        <View style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                          backgroundColor: getCategoryColor(item.category) + '20',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: spacing[3]
+                        }}>
+                          <Ionicons 
+                            name={getCategoryIcon(item.category) as any} 
+                            size={20} 
+                            color={getCategoryColor(item.category)} 
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text variant="body" weight="semibold" numberOfLines={1}>
+                            {item.description}
+                          </Text>
+                          <Text variant="caption" color="secondary">
+                            {item.category} • {item.paid_by_name}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text variant="h3" weight="semibold" color="primary">
+                        {formatAmount(item.amount)}
+                      </Text>
+                    </View>
+                    
+                    <View style={[layoutStyles.rowBetween, { alignItems: 'center' }]}>
+                      <Text variant="caption" color="secondary">
+                        {new Date(item.created_at).toLocaleDateString('fr-FR')}
+                      </Text>
+                      {isOwner && (
+                        <View style={[layoutStyles.row, { gap: spacing[2] }]}>
+                          <TouchableOpacity onPress={() => console.log('Modifier', item.id)}>
+                            <Ionicons name="pencil" size={16} color={theme.textSecondary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => console.log('Supprimer', item.id)}>
+                            <Ionicons name="trash" size={16} color={theme.error} />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  </Card>
+                ))}
               </View>
-              <Text style={styles.expensePaidBy}>Payé par: {expense.paidBy}</Text>
-            </View>
-          ))}
-        </Card>
+            )}
+          </View>
+
+          {/* Espace en bas */}
+          <View style={{ height: spacing[8] }} />
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 12,
-    backgroundColor: '#F3F4F6',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  addButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  addForm: {
-    margin: 16,
-    padding: 16,
-  },
-  formTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  input: {
-    marginBottom: 12,
-  },
-  categoryContainer: {
-    marginBottom: 12,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  categoryScroll: {
-    flexDirection: 'row',
-  },
-  categoryButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-    marginRight: 8,
-  },
-  categoryButtonSelected: {
-    backgroundColor: '#3B82F6',
-  },
-  categoryButtonText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  categoryButtonTextSelected: {
-    color: '#FFFFFF',
-  },
-  formButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  formButton: {
-    flex: 1,
-  },
-  cancelButton: {
-    backgroundColor: '#6B7280',
-  },
-  content: {
-    flex: 1,
-  },
-  budgetSummary: {
-    margin: 16,
-    padding: 16,
-  },
-  section: {
-    marginBottom: 16,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  budgetRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  budgetLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  budgetValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
-    marginTop: 12,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#3B82F6',
-  },
-  contributionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  contributionName: {
-    fontSize: 14,
-    color: '#1F2937',
-    fontWeight: '500',
-  },
-  contributionAmount: {
-    fontSize: 14,
-    color: '#1F2937',
-    fontWeight: '600',
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  categoryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  categoryName: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1F2937',
-  },
-  categoryTotal: {
-    fontSize: 14,
-    color: '#1F2937',
-    fontWeight: '600',
-  },
-  expenseCard: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  expenseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  expenseInfo: {
-    flex: 1,
-  },
-  expenseTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  expenseDate: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  expenseDescription: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  expenseActions: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  categoryBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  categoryBadgeText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
-  expenseAmount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  deleteButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#EF4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  expensePaidBy: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 8,
-  },
-}); 

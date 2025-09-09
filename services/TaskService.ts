@@ -231,9 +231,10 @@ class TaskService {
 
   /**
    * Obtenir la couleur de statut de validation
+   * @deprecated Utilisez les tokens de couleur du thème à la place
    */
   static getValidationColor(validatedBy: number | null): string {
-    // à supprimer
+    // TODO: Remplacer par les tokens de couleur du thème
     return validatedBy ? '#34C759' : '#FF9500';
   }
 

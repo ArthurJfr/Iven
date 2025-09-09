@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../../../../components/ui/Card';
 import Button from '../../../../components/ui/Button';
+import { EmptyState } from '../../../../components/ui';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -265,19 +266,21 @@ export default function EventMediaScreen() {
             ))}
           </View>
         ) : (
-          <Card style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              {selectedFilter === 'all' 
-                ? "Aucun média pour cet événement"
-                : selectedFilter === 'images' 
-                ? "Aucune photo pour cet événement"
-                : "Aucune vidéo pour cet événement"
-              }
-            </Text>
-            <Text style={styles.emptyStateSubtext}>
-              Ajoutez votre premier média pour commencer
-            </Text>
-          </Card>
+          <EmptyState
+            icon={selectedFilter === 'videos' ? 'videocam-outline' : 'images-outline'}
+            title={selectedFilter === 'all' 
+              ? "Aucun média pour cet événement"
+              : selectedFilter === 'images' 
+              ? "Aucune photo pour cet événement"
+              : "Aucune vidéo pour cet événement"
+            }
+            description="Ajoutez votre premier média pour commencer"
+            actionButton={{
+              text: 'Ajouter un média',
+              onPress: () => setShowUploadOptions(true),
+              icon: 'add'
+            }}
+          />
         )}
       </ScrollView>
     </View>

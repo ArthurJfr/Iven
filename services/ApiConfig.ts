@@ -53,6 +53,11 @@ export const API_CONFIG = {
         add: (eventId: string) => `/event/${eventId}/participants`,
         remove: (eventId: string, userId: string) => `/event/${eventId}/participants/${userId}`,
       },
+      invitations: {
+        invite: (eventId: string) => `/event/${eventId}/invite`,
+        list: (eventId: string) => `/event/${eventId}/invitations`,
+        respond: (invitationId: string) => `/event/invitations/${invitationId}/respond`,
+      },
     },
     users: {
       profile: '/users/profile',

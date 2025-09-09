@@ -11,6 +11,7 @@ import { eventService } from '../../../services/EventService';
 import { Event } from '../../../types/events';
 import { RefreshControl } from 'react-native';  
 import Header from '../../../components/ui/organisms/Header';
+import { EmptyState } from '../../../components/ui';
 import { spacing } from '../../../styles';
 import { EventList, EventFilters, EventStats } from '../../../components/features/events';
 
@@ -133,26 +134,17 @@ export default function EventsListScreen() {
             }}
           />
           
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginTop: spacing[8] }}>
-            <Ionicons name="alert-circle-outline" size={64} color={theme.error} />
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginTop: 16, textAlign: 'center' }}>
-              Erreur de chargement
-            </Text>
-            <Text style={{ color: theme.textSecondary, marginTop: 8, textAlign: 'center', marginBottom: 24 }}>
-              {error}
-            </Text>
-            <TouchableOpacity
-              style={{
-                backgroundColor: theme.primary,
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                borderRadius: 8
-              }}
-              onPress={handleRefresh}
-            >
-              <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Réessayer</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="alert-circle-outline"
+            title="Erreur de chargement"
+            description={error}
+            iconColor={theme.error}
+            actionButton={{
+              text: 'Réessayer',
+              onPress: handleRefresh,
+              icon: 'refresh'
+            }}
+          />
         </View>
       </ProtectedRoute>
     );
@@ -171,26 +163,16 @@ export default function EventsListScreen() {
             }}
           />
           
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginTop: spacing[8] }}>
-            <Ionicons name="calendar-outline" size={64} color={theme.textSecondary} />
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginTop: 16, textAlign: 'center' }}>
-              Aucun événement
-            </Text>
-            <Text style={{ color: theme.textSecondary, marginTop: 8, textAlign: 'center', marginBottom: 24 }}>
-              Vous ne participez à aucun événement pour le moment.
-            </Text>
-            <TouchableOpacity
-              style={{
-                backgroundColor: theme.primary,
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                borderRadius: 8
-              }}
-              onPress={() => router.push('/modals/create-event')}
-            >
-              <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Créer un événement</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="calendar-outline"
+            title="Aucun événement"
+            description="Vous ne participez à aucun événement pour le moment."
+            actionButton={{
+              text: 'Créer un événement',
+              onPress: () => router.push('/modals/create-event'),
+              icon: 'add-circle'
+            }}
+          />
         </View>
       </ProtectedRoute>
     );

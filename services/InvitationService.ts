@@ -20,9 +20,9 @@ export interface CreateInvitationRequest {
   message?: string;
 }
 
-export interface InvitationResponse {
-  invitation_id: number;
-  action: 'accept' | 'decline';
+
+export interface RespondToInvitationRequest {
+  response: 'accepted' | 'declined';
 }
 
 export interface UserSearchResult {
@@ -32,6 +32,8 @@ export interface UserSearchResult {
   role: string;
   fname?: string;
   lname?: string;
+  avatar_url?: string;
+  active: boolean;
 }
 
 export interface UserSearchRequest {
@@ -59,19 +61,37 @@ class InvitationService {
         ...(searchRequest.excludeParticipants !== undefined && { excludeParticipants: searchRequest.excludeParticipants.toString() })
       });
       
-      const response = await apiService.get<{ 
-        success: boolean;
-        data: { users: UserSearchResult[], count: number, searchTerm: string };
-        message: string;
-      }>(`${this.BASE_URL}/search/users?${queryParams}`);
+      const response = await apiService.get<any>(`${this.BASE_URL}/search/users?${queryParams}`);
       
-      console.log('🔍 Réponse brute de l\'API:', response);
+      console.log('🔍 Réponse brute de l\'API de recherche:', response);
+      console.log('🔍 Structure des données:', response.data);
       
-      if (response.data?.success && response.data?.data?.users) {
-        console.info(`✅ ${response.data.data.count || 0} utilisateur(s) trouvé(s)`);
+      // Vérification plus permissive - si la requête a réussi
+      if (response.success && response.data) {
+        // Essayons différentes structures possibles
+        let users: UserSearchResult[] = [];
+        let count = 0;
+        
+        // Structure 1: { success, data: { users, count } }
+        if (response.data.success && response.data.data?.users) {
+          users = response.data.data.users;
+          count = response.data.data.count || users.length;
+        }
+        // Structure 2: { users, count } directement
+        else if (response.data.users) {
+          users = response.data.users;
+          count = response.data.count || users.length;
+        }
+        // Structure 3: array direct
+        else if (Array.isArray(response.data)) {
+          users = response.data;
+          count = users.length;
+        }
+        
+        console.info(`✅ ${count} utilisateur(s) trouvé(s)`);
         return {
           success: true,
-          data: response.data.data.users,
+          data: users,
           message: response.data.message || 'Recherche réussie'
         };
       } else {
@@ -98,13 +118,47 @@ class InvitationService {
     try {
       console.info(`📨 Invitation de l'utilisateur ${invitationData.userId} à l'événement ${eventId}`);
       
-      const response = await apiService.post<{ success: boolean; data: Invitation; message: string }>(`${this.BASE_URL}/${eventId}/invite`, invitationData);
+      // Testons d'abord avec /events (au pluriel) comme vous l'avez mentionné
+      const endpoint = `/event/${eventId}/invite`;
+      console.info(`🔗 Endpoint utilisé: ${endpoint}`);
+      console.info(`📦 Données envoyées:`, invitationData);
       
-      if (response.data?.success && response.data?.data) {
+      const response = await apiService.post<{ 
+        message: string; 
+        invitation: {
+          id: number;
+          event_id: number;
+          invited_user: {
+            id: number;
+            username: string;
+            email: string;
+            fname?: string;
+            lname?: string;
+          };
+          message?: string;
+          expires_at: string;
+        }
+      }>(endpoint, invitationData);
+      
+      if (response.success && response.data?.invitation) {
         console.info('✅ Invitation envoyée avec succès');
+        
+        // Adapter la réponse de votre API au format attendu
+        const adaptedInvitation: Invitation = {
+          id: response.data.invitation.id,
+          event_id: response.data.invitation.event_id,
+          user_id: response.data.invitation.invited_user.id,
+          inviter_id: 0, // Non fourni par votre API, valeur par défaut
+          message: response.data.invitation.message,
+          status: 'pending', // Statut par défaut pour une nouvelle invitation
+          created_at: new Date().toISOString(), // Date actuelle
+          updated_at: new Date().toISOString(), // Date actuelle
+          expires_at: response.data.invitation.expires_at
+        };
+        
         return {
           success: true,
-          data: response.data.data,
+          data: adaptedInvitation,
           message: response.data.message || 'Invitation envoyée'
         };
       } else {
@@ -124,6 +178,7 @@ class InvitationService {
     }
   }
 
+
   /**
    * Récupérer les invitations d'un événement
    */
@@ -131,7 +186,7 @@ class InvitationService {
     try {
       console.info(`📋 Récupération des invitations de l'événement ${eventId}`);
       
-      const response = await apiService.get<{ success: boolean; data: Invitation[]; message: string }>(`${this.BASE_URL}/${eventId}/invitations`);
+      const response = await apiService.get<{ success: boolean; data: Invitation[]; message: string }>(`${this.BASE_URL}/invitations/user`);
       
       if (response.data?.success && response.data?.data) {
         console.info(`✅ ${response.data.data.length || 0} invitations récupérées`);
@@ -195,25 +250,57 @@ class InvitationService {
   /**
    * Répondre à une invitation (accepter/refuser)
    */
-  async respondToInvitation(invitationId: number, response: InvitationResponse): Promise<ApiResponse<Invitation>> {
+  async respondToInvitation(invitationId: number, responseData: RespondToInvitationRequest): Promise<ApiResponse<Invitation>> {
     try {
-      console.info(`📝 Réponse à l'invitation ${invitationId}:`, response.action);
+      console.info(`📝 Réponse à l'invitation ${invitationId}: ${responseData.response}`);
       
-      const apiResponse = await apiService.put<{ success: boolean; data: Invitation; message: string }>(`${this.BASE_URL}/invitations/${invitationId}/respond`, response);
+      const endpoint = `/event/invitations/${invitationId}/respond`;
+      console.info(`🔗 Endpoint utilisé: ${endpoint}`);
+      console.info(`📦 Données envoyées:`, responseData);
       
-      if (apiResponse.data?.success && apiResponse.data?.data) {
-        console.info('✅ Réponse à l\'invitation envoyée avec succès');
+      const response = await apiService.put<{ 
+        message: string; 
+        // Pour invitation acceptée
+        event?: {
+          id: number;
+          title: string;
+          start_date: string;
+          end_date: string;
+          location?: string;
+        };
+        // Pour invitation refusée
+        invitation_id?: number;
+      }>(endpoint, responseData);
+      
+      if (response.success && response.data) {
+        console.info(`✅ Réponse à l'invitation enregistrée: ${responseData.response}`);
+        
+        // Créer une invitation adaptée avec le nouveau statut
+        const adaptedInvitation: Invitation = {
+          id: invitationId,
+          event_id: response.data.event?.id || 0, // Si acceptée, on a l'event_id
+          user_id: 0, // Non fourni par votre API, valeur par défaut
+          inviter_id: 0, // Non fourni par votre API, valeur par défaut
+          message: undefined,
+          status: responseData.response === 'accepted' ? 'accepted' : 'declined',
+          created_at: new Date().toISOString(), // Non fourni, valeur par défaut
+          updated_at: new Date().toISOString(), // Date actuelle
+          expires_at: new Date().toISOString() // Non fourni, valeur par défaut
+        };
+        
         return {
           success: true,
-          data: apiResponse.data.data,
-          message: apiResponse.data.message || 'Réponse envoyée'
+          data: adaptedInvitation,
+          message: response.data.message || 'Réponse enregistrée',
+          // Ajouter les infos de l'événement si invitation acceptée
+          ...(response.data.event && { event: response.data.event })
         };
       } else {
-        console.error('❌ Échec de l\'envoi de la réponse:', apiResponse.error);
+        console.error('❌ Échec de la réponse à l\'invitation:', response.error);
         return {
           success: false,
           data: undefined,
-          error: apiResponse.error || 'Format de réponse incorrect'
+          error: response.error || 'Format de réponse incorrect'
         };
       }
     } catch (error: any) {

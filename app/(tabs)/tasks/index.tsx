@@ -148,54 +148,17 @@ export default function TasksScreen() {
             title="Mes Tâches"
           />
           
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[5] }}>
-            <View style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: theme.error + '15',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: spacing[4]
-            }}>
-              <Ionicons name="alert-circle-outline" size={40} color={theme.error} />
-            </View>
-            
-            <Text style={{ 
-              fontSize: 20, 
-              fontWeight: 'bold', 
-              color: theme.text, 
-              marginBottom: spacing[2], 
-              textAlign: 'center' 
-            }}>
-              Erreur de chargement
-            </Text>
-            
-            <Text style={{ 
-              color: theme.textSecondary, 
-              marginBottom: spacing[6], 
-              textAlign: 'center',
-              lineHeight: 22,
-              paddingHorizontal: spacing[4]
-            }}>
-              {error}
-            </Text>
-            
-            <TouchableOpacity
-              style={{
-                backgroundColor: theme.primary,
-                paddingHorizontal: spacing[5],
-                paddingVertical: spacing[3],
-                borderRadius: 12,
-                flexDirection: 'row',
-                alignItems: 'center'
-              }}
-              onPress={fetchUserTasks}
-            >
-              <Ionicons name="refresh" size={20} color="white" style={{ marginRight: spacing[2] }} />
-              <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>Réessayer</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="alert-circle-outline"
+            title="Erreur de chargement"
+            description={error}
+            iconColor={theme.error}
+            actionButton={{
+              text: 'Réessayer',
+              onPress: fetchUserTasks,
+              icon: 'refresh'
+            }}
+          />
         </View>
       </ProtectedRoute>
     );

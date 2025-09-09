@@ -37,9 +37,8 @@ const HomeActions = React.memo(({
 
   // Mémoriser les actions pour éviter les recalculs
   const actionItems = useMemo(() => actions.map((action, index) => (
-    <Link href={action.route} asChild>
+    <Link key={`${action.title}-${index}`} href={action.route} asChild>
     <TouchableOpacity
-      key={`${action.title}-${index}`}
       onPress={() => handleActionPress(action.route)}
       activeOpacity={0.7}
     >

@@ -41,6 +41,31 @@ class UserService {
       };
     }
   }
+
+  /**
+   * Rechercher des utilisateurs par nom d'utilisateur, prénom ou nom
+   */
+  async searchUsers(query: string): Promise<ApiResponse<User[]>> {
+    try {
+      console.info(`🔍 Recherche d'utilisateurs avec la requête: ${query}`);
+      
+      const response = await apiService.get<User[]>(`${this.BASE_URL}/search?q=${encodeURIComponent(query)}`);
+      
+      if (response.success) {
+        console.info(`✅ ${response.data?.length || 0} utilisateur(s) trouvé(s)`);
+      } else {
+        console.error('❌ Échec de la recherche d\'utilisateurs:', response.error);
+      }
+      
+      return response;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la recherche d\'utilisateurs:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la recherche d\'utilisateurs'
+      };
+    }
+  }
 }
 
 export const userService = new UserService();

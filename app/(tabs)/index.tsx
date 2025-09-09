@@ -8,6 +8,7 @@ import { createThemedStyles, layoutStyles, spacing } from '../../styles';
 import Text from '../../components/ui/atoms/Text';
 import Header from '../../components/ui/organisms/Header';
 import Avatar from '../../components/ui/atoms/Avatar';
+import Badge from '../../components/ui/atoms/Badge';
 import { EventCard } from '../../components/features/events';
 import { HomeStats, HomeActions, HomeUpcomingEvents, HomeSettings } from '../../components/features/home';
 import { useAuth } from '../../contexts/AuthContext';
@@ -141,6 +142,25 @@ export default function HomeScreen() {
   // Ajouter le hook des notifications
   const { notificationCount, refreshNotifications } = useNotifications();
 
+  // Rafraîchir les notifications quand on rafraîchit la page
+  const onRefreshWithNotifications = async () => {
+    setRefreshing(true);
+    
+    try {
+      // Charger les données en parallèle
+      await Promise.all([
+        loadUserEvents(),
+        loadUserTasks(),
+        calculateStats(),
+        refreshNotifications() // Rafraîchir aussi les notifications
+      ]);
+    } catch (error) {
+      console.error('❌ Erreur lors du rafraîchissement:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Fallback si pas d'utilisateur connecté
   if (!user) {
     return (
@@ -168,7 +188,7 @@ route: '/modals/create-event'
       title: 'Mes tâches',
       subtitle: `${stats.pendingTasks} en attente`,
       icon: 'checkmark-done',
-      color: '#FF9500',
+      color: theme.warning,
       route: '/tasks'
     },
   ];
@@ -191,7 +211,7 @@ route: '/modals/create-event'
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={onRefreshWithNotifications}
             colors={[theme.primary]}
             tintColor={theme.primary}
           />
@@ -217,16 +237,12 @@ route: '/modals/create-event'
                 <Text variant="caption" color="secondary">
                   @{user.username}
                 </Text>
-                <View style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: user.active ? '#34C759' : '#FF9500',
-                  marginLeft: spacing[2]
-                }} />
-                <Text variant="caption" color="secondary" style={{ marginLeft: spacing[1] }}>
-                  {user.active ? 'Vérifié' : 'En attente'}
-                </Text>
+                <Badge 
+                  text={user.active ? 'Vérifié' : 'En attente'}
+                  color={user.active ? theme.success : theme.warning}
+                  variant="small"
+                  style={{ marginLeft: spacing[2] }}
+                />
               </View>
             </View>
           </View>

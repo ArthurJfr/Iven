@@ -4,6 +4,7 @@ import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { TaskProvider } from '../contexts/TaskContext';
 import { EventProvider } from '../contexts/EventContext';
+import { NotificationProvider } from '../contexts/NotificationContext';
 import { createThemedStyles } from '../styles';
 import AuthInitializer from '../components/AuthInitializer';
 
@@ -33,11 +34,13 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <TaskProvider>
-          <EventProvider>
-            <RootStack />
-          </EventProvider>
-        </TaskProvider>
+        <NotificationProvider>
+          <TaskProvider>
+            <EventProvider>
+              <RootStack />
+            </EventProvider>
+          </TaskProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

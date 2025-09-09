@@ -34,7 +34,7 @@ export default function EventInvitations({
       setLoading(true);
       setError(null);
       
-      const response = await invitationService.getEventInvitations(eventId);
+      const response = await invitationService.getUserInvitations();
       
       if (response.success && response.data) {
         setInvitations(response.data);
@@ -183,7 +183,7 @@ export default function EventInvitations({
       {/* Invitations en attente */}
       {pendingInvitations.length > 0 && (
         <View style={styles.section}>
-          <Text variant="h4" weight="semibold" style={{ marginBottom: spacing[3] }}>
+          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[3] }}>
             En attente ({pendingInvitations.length})
           </Text>
           <View style={styles.invitationsList}>
@@ -233,7 +233,7 @@ export default function EventInvitations({
       {/* Invitations acceptées */}
       {acceptedInvitations.length > 0 && (
         <View style={styles.section}>
-          <Text variant="h4" weight="semibold" style={{ marginBottom: spacing[3] }}>
+          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[3] }}>
             Acceptées ({acceptedInvitations.length})
           </Text>
           <View style={styles.invitationsList}>
@@ -262,7 +262,7 @@ export default function EventInvitations({
       {/* Invitations refusées */}
       {declinedInvitations.length > 0 && (
         <View style={styles.section}>
-          <Text variant="h4" weight="semibold" style={{ marginBottom: spacing[3] }}>
+          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[3] }}>
             Refusées ({declinedInvitations.length})
           </Text>
           <View style={styles.invitationsList}>
@@ -291,7 +291,7 @@ export default function EventInvitations({
       {/* Invitations expirées */}
       {expiredInvitations.length > 0 && (
         <View style={styles.section}>
-          <Text variant="h4" weight="semibold" style={{ marginBottom: spacing[3] }}>
+          <Text variant="h3" weight="semibold" style={{ marginBottom: spacing[3] }}>
             Expirées ({expiredInvitations.length})
           </Text>
           <View style={styles.invitationsList}>

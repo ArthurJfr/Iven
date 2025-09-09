@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../hooks/useNotifications';
 import { invitationService, type Invitation } from '../../services/InvitationService';
 import { createThemedStyles, layoutStyles, spacing } from '../../styles';
 import Text from '../../components/ui/atoms/Text';
@@ -29,6 +30,7 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
+  const { refreshNotifications, clearNotifications } = useNotifications();
   const themedStyles = createThemedStyles(theme);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -86,8 +88,7 @@ export default function NotificationsScreen() {
   const handleInvitationResponse = async (invitationId: number, response: 'accept' | 'decline') => {
     try {
       const result = await invitationService.respondToInvitation(invitationId, { 
-        invitation_id: invitationId, 
-        action: response 
+        response: response === 'accept' ? 'accepted' : 'declined'
       });
       
       if (result.success) {
@@ -119,6 +120,27 @@ export default function NotificationsScreen() {
   const markAllAsRead = () => {
     setNotifications(prev => 
       prev.map(notif => ({ ...notif, read: true }))
+    );
+    // Mettre à jour le badge
+    clearNotifications();
+  };
+
+  // Vider toutes les notifications
+  const clearAllNotifications = () => {
+    Alert.alert(
+      'Vider les notifications',
+      'Êtes-vous sûr de vouloir supprimer toutes les notifications ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Vider', 
+          style: 'destructive',
+          onPress: () => {
+            setNotifications([]);
+            clearNotifications();
+          }
+        }
+      ]
     );
   };
 
@@ -183,6 +205,9 @@ export default function NotificationsScreen() {
           rightAction={unreadCount > 0 ? {
             icon: "checkmark-circle-outline",
             onPress: markAllAsRead
+          } : notifications.length > 0 ? {
+            icon: "trash-outline",
+            onPress: clearAllNotifications
           } : undefined}
         />
 
