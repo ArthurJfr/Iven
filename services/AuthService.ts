@@ -1,5 +1,5 @@
 import { apiService } from './ApiService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import type { ApiResponse } from '../types/api';
 import type { User, LoginRequest, RegisterRequest, ConfirmAccountRequest, VerifyTokenResponse } from '../types/auth';
 import { API_CONFIG } from './ApiConfig';
@@ -20,9 +20,9 @@ class AuthService {
   
   // Clés de stockage
   private readonly STORAGE_KEYS = {
-    AUTH_TOKEN: '@iven_auth_token',
-    USER_DATA: '@iven_user_data',
-    AUTH_EXPIRES: '@iven_auth_expires'
+    AUTH_TOKEN: 'iven_auth_token',
+    USER_DATA: 'iven_user_data',
+    AUTH_EXPIRES: 'iven_auth_expires'
   };
 
   /**
@@ -33,7 +33,7 @@ class AuthService {
       // Tentative de réparation des données corrompues
       await this.repairStoredAuth();
       
-      const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
+      const token = await SecureStore.getItemAsync(this.STORAGE_KEYS.AUTH_TOKEN);
       
       // Si pas de token stocké, pas d'authentification
       if (!token) {
@@ -42,7 +42,7 @@ class AuthService {
       }
 
       // Récupérer les données utilisateur stockées localement en premier
-      const storedUserData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
+      const storedUserData = await SecureStore.getItemAsync(this.STORAGE_KEYS.USER_DATA);
       let localUser: User | null = null;
       
       if (storedUserData) {
@@ -132,8 +132,8 @@ class AuthService {
       
       // En cas d'erreur réseau, essayer de restaurer avec les données locales
       try {
-        const storedUserData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
-        const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
+        const storedUserData = await SecureStore.getItemAsync(this.STORAGE_KEYS.USER_DATA);
+        const token = await SecureStore.getItemAsync(this.STORAGE_KEYS.AUTH_TOKEN);
         
         if (storedUserData && token) {
           const localUser = JSON.parse(storedUserData);
@@ -278,11 +278,10 @@ class AuthService {
         console.warn('⚠️ expiresAt est undefined, utilisation d\'une chaîne vide');
       }
 
-      await AsyncStorage.multiSet([
-        [this.STORAGE_KEYS.AUTH_TOKEN, token],
-        [this.STORAGE_KEYS.USER_DATA, userData],
-        [this.STORAGE_KEYS.AUTH_EXPIRES, expiresAt]
-      ]);
+      await SecureStore.setItemAsync(this.STORAGE_KEYS.AUTH_TOKEN, token);
+      await SecureStore.setItemAsync(this.STORAGE_KEYS.USER_DATA, userData);
+      await SecureStore.setItemAsync(this.STORAGE_KEYS.AUTH_EXPIRES, expiresAt);
+      
       console.info('💾 Données d\'authentification sauvegardées');
     } catch (error) {
       console.error('❌ Erreur sauvegarde auth:', error);
@@ -292,32 +291,29 @@ class AuthService {
   }
 
   /**
-   * Nettoyer et réparer les données AsyncStorage corrompues
+   * Nettoyer et réparer les données SecureStore corrompues
    */
   async repairStoredAuth(): Promise<void> {
     try {
-      console.info('🔧 Tentative de réparation des données AsyncStorage...');
+      console.info('🔧 Tentative de réparation des données SecureStore...');
       
-      // Récupérer toutes les clés d'authentification
-      const keys = await AsyncStorage.getAllKeys();
-      const authKeys = keys.filter(key => key.startsWith('@iven_'));
-      
-      if (authKeys.length === 0) {
-        console.info('ℹ️ Aucune donnée d\'authentification trouvée');
-        return;
-      }
-
       // Vérifier chaque clé et nettoyer si nécessaire
-      for (const key of authKeys) {
-        const value = await AsyncStorage.getItem(key);
+      const keys = [
+        this.STORAGE_KEYS.AUTH_TOKEN,
+        this.STORAGE_KEYS.USER_DATA,
+        this.STORAGE_KEYS.AUTH_EXPIRES
+      ];
+      
+      for (const key of keys) {
+        const value = await SecureStore.getItemAsync(key);
         
         if (value === null || value === undefined || value === '') {
           console.warn(`⚠️ Clé corrompue détectée: ${key}, suppression...`);
-          await AsyncStorage.removeItem(key);
+          await SecureStore.deleteItemAsync(key);
         }
       }
 
-      console.info('✅ Réparation des données AsyncStorage terminée');
+      console.info('✅ Réparation des données SecureStore terminée');
     } catch (error) {
       console.error('❌ Erreur lors de la réparation:', error);
       // En cas d'erreur, nettoyer complètement
@@ -330,11 +326,9 @@ class AuthService {
    */
   private async clearStoredAuth(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([
-        this.STORAGE_KEYS.AUTH_TOKEN,
-        this.STORAGE_KEYS.USER_DATA,
-        this.STORAGE_KEYS.AUTH_EXPIRES
-      ]);
+      await SecureStore.deleteItemAsync(this.STORAGE_KEYS.AUTH_TOKEN);
+      await SecureStore.deleteItemAsync(this.STORAGE_KEYS.USER_DATA);
+      await SecureStore.deleteItemAsync(this.STORAGE_KEYS.AUTH_EXPIRES);
       console.info('🗑️ Données d\'authentification supprimées');
     } catch (error) {
       console.error('❌ Erreur suppression auth:', error);
@@ -572,18 +566,17 @@ class AuthService {
       if (response.success && response.data) {
         this.authToken = response.data.token;
         apiService.setAuthToken(response.data.token);
-        
-        console.info('✅ Token rafraîchi');
-        return response;
+        if (this.currentUser) {
+          await this.persistAuthData({
+            token: response.data.token,
+            user: this.currentUser,
+            expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+          });
+        }
       }
-
       return response;
     } catch (error: any) {
-      console.error('❌ Erreur lors du rafraîchissement:', error);
-      return {
-        success: false,
-        error: error.message || 'Erreur lors du rafraîchissement du token'
-      };
+      return { success: false, error: error.message || 'Erreur lors du rafraîchissement du token' };
     }
   }
 
@@ -673,8 +666,8 @@ class AuthService {
     try {
       //console.info('📱 Tentative de restauration depuis le stockage local...');
       
-      const token = await AsyncStorage.getItem(this.STORAGE_KEYS.AUTH_TOKEN);
-      const storedUserData = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
+      const token = await SecureStore.getItemAsync(this.STORAGE_KEYS.AUTH_TOKEN);
+      const storedUserData = await SecureStore.getItemAsync(this.STORAGE_KEYS.USER_DATA);
       
       if (!token || !storedUserData) {
         //console.info('ℹ️ Aucune donnée locale disponible pour la restauration');

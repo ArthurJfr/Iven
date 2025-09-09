@@ -30,7 +30,8 @@
           "photosPermission": "L'application accède à vos photos pour vous permettre de partager des médias.",
           "cameraPermission": "L'application accède à votre appareil photo pour prendre des photos."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

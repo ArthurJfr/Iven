@@ -49,60 +49,60 @@ export default function ProfileScreen() {
           subtitle: 'Clair ou sombre',
           component: <ToggleTheme />
         },
-        { 
-          icon: 'notifications-outline', 
-          title: 'Notifications push', 
-          subtitle: 'Recevoir des alertes',
-          action: () => {},
-          component: null
-        },
-        { 
-          icon: 'mail-outline', 
-          title: 'Notifications email', 
-          subtitle: 'Recevoir des emails',
-          action: () => {},
-          component: null
-        },
+        // { 
+        //   icon: 'notifications-outline', 
+        //   title: 'Notifications push', 
+        //   subtitle: 'Recevoir des alertes',
+        //   action: () => {},
+        //   component: null
+        // },
+        // { 
+        //   icon: 'mail-outline', 
+        //   title: 'Notifications email', 
+        //   subtitle: 'Recevoir des emails',
+        //   action: () => {},
+        //   component: null
+        // },
       ]
     },
-    {
-      title: "Confidentialité & Sécurité",
-      items: [
-        { 
-          icon: 'lock-closed-outline', 
-          title: 'Profil privé', 
-          subtitle: 'Contrôler la visibilité',
-          action: () => {},
-          component: null
-        },
-        { 
-          icon: 'eye-off-outline', 
-          title: 'Statut en ligne', 
-          subtitle: 'Afficher votre présence',
-          action: () => {},
-          component: null
-        },
-      ]
-    },
-    {
-      title: "Support & Informations",
-      items: [
-        { 
-          icon: 'help-circle-outline', 
-          title: 'Centre d\'aide', 
-          subtitle: 'FAQ et assistance',
-          action: () => {},
-          component: null
-        },
-        { 
-          icon: 'information-circle-outline', 
-          title: 'À propos d\'Iven', 
-          subtitle: 'Version 1.0.0',
-          action: () => {},
-          component: null
-        }
-      ]
-    }
+    // {
+    //   title: "Confidentialité & Sécurité",
+    //   items: [
+    //     { 
+    //       icon: 'lock-closed-outline', 
+    //       title: 'Profil privé', 
+    //       subtitle: 'Contrôler la visibilité',
+    //       action: () => {},
+    //       component: null
+    //     },
+    //     { 
+    //       icon: 'eye-off-outline', 
+    //       title: 'Statut en ligne', 
+    //       subtitle: 'Afficher votre présence',
+    //       action: () => {},
+    //       component: null
+    //     },
+    //   ]
+    // },
+    // {
+    //   title: "Support & Informations", 
+    //   items: [
+    //     {
+    //       icon: 'help-circle-outline',
+    //       title: 'Centre d\'aide',
+    //       subtitle: 'FAQ et assistance', 
+    //       action: () => {},
+    //       component: null
+    //     },
+    //     {
+    //       icon: 'information-circle-outline',
+    //       title: 'À propos d\'Iven',
+    //       subtitle: 'Version 1.0.0',
+    //       action: () => {},
+    //       component: null
+    //     }
+    //   ]
+    // }
   ];
 
   return (
@@ -110,6 +110,14 @@ export default function ProfileScreen() {
       <View style={[layoutStyles.container, themedStyles.surface]}>
         <Header 
           title="Mon profil"
+
+
+          rightAction={
+            {
+              icon: "edit-outline",
+              onPress: () => router.push('/modals/update-profile')
+            }
+          }
         />
       
       <ScrollView 
@@ -221,12 +229,7 @@ export default function ProfileScreen() {
               </View>
 
               {/* Divider */}
-              <View style={{ 
-                width: '100%', 
-                height: 1, 
-                backgroundColor: theme.border,
-                marginBottom: spacing[5] 
-              }} />
+
 
               {/* Statistiques en grid - reste identique */}
 
@@ -234,10 +237,9 @@ export default function ProfileScreen() {
           </Card>
         </View>
 
-        {/* Sections Paramètres avec espacement amélioré */}
         <View style={{ paddingHorizontal: spacing[5] }}>
           {settingSections.map((section, sectionIndex) => (
-            <View key={sectionIndex} style={{ marginBottom: spacing[5] }}>
+            <View key={`section-${section.title}-${sectionIndex}`} style={{ marginBottom: spacing[5] }}>
               <Text variant="h3" weight="semibold" style={{ 
                 marginBottom: spacing[3],
                 marginLeft: spacing[1] 
@@ -248,8 +250,12 @@ export default function ProfileScreen() {
               <Card variant="elevated" padding="medium">
                 {section.items.map((item, itemIndex) => (
                   <TouchableOpacity
-                    key={itemIndex}
-                    onPress={item.action}
+                    key={`item-${section.title}-${itemIndex}-${item.title || itemIndex}`}
+                    onPress={() => {
+                      if ('route' in item && item.route) {
+                        router.push(item.route as string);
+                      }
+                    }}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',

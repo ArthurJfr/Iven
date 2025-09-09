@@ -486,7 +486,7 @@ export default function EventDetailScreen() {
           <View style={[layoutStyles.gap4, { marginBottom: spacing[8] }]}>
             {primaryActions.map((action, index) => (
               <TouchableOpacity
-                key={index}
+                key={`action-${action.title}-${index}`}
                 onPress={() => router.push(action.route as any)}
               >
                 <Card variant="elevated" padding="medium">

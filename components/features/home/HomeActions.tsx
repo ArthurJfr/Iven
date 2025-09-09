@@ -5,6 +5,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import Text from '../../ui/atoms/Text';
 import Card from '../../ui/Card';
 import { spacing } from '../../../styles';
+import { Link } from 'expo-router';
 
 interface ActionItem {
   title: string;
@@ -36,6 +37,7 @@ const HomeActions = React.memo(({
 
   // Mémoriser les actions pour éviter les recalculs
   const actionItems = useMemo(() => actions.map((action, index) => (
+    <Link href={action.route} asChild>
     <TouchableOpacity
       key={`${action.title}-${index}`}
       onPress={() => handleActionPress(action.route)}
@@ -44,10 +46,10 @@ const HomeActions = React.memo(({
       <Card 
         variant="elevated" 
         padding="medium"
-        style={[
-          styles.actionCard,
-          { marginBottom: index < actions.length - 1 ? spacing[3] : 0 }
-        ]}
+        style={{
+          ...styles.actionCard,
+          marginBottom: index < actions.length - 1 ? spacing[3] : 0
+        }}
       >
         <View style={styles.actionContent}>
           <View style={[
@@ -68,7 +70,7 @@ const HomeActions = React.memo(({
           
           <View style={styles.actionInfo}>
             <Text 
-              variant={compact ? "body" : "h4"} 
+              variant={compact ? "body" : "h3"} 
               weight="semibold" 
               style={styles.actionTitle}
             >
@@ -91,6 +93,7 @@ const HomeActions = React.memo(({
         </View>
       </Card>
     </TouchableOpacity>
+    </Link>
   )), [actions, handleActionPress, compact, theme.textSecondary]);
 
   return (

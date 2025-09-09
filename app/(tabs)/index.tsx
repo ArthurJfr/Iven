@@ -162,14 +162,14 @@ export default function HomeScreen() {
       subtitle: 'Organisez quelque chose',
       icon: 'add-circle',
       color: theme.primary,
-      action: () => router.push('/modals/create-event')
+route: '/modals/create-event'
     },
     {
       title: 'Mes tâches',
       subtitle: `${stats.pendingTasks} en attente`,
       icon: 'checkmark-done',
       color: '#FF9500',
-      action: () => router.push('/tasks')
+      route: '/tasks'
     },
   ];
 
@@ -242,15 +242,10 @@ export default function HomeScreen() {
             subtitle: action.subtitle,
             icon: action.icon,
             color: action.color,
-            route: action.action.toString()
+            route: action.route.toString()
           }))}
           onActionPress={(route) => {
-            // Exécuter l'action correspondante
-            if (route.includes('create-event')) {
-              router.push('/modals/create-event');
-            } else if (route.includes('tasks')) {
-              router.push('/tasks');
-            }
+            router.push(route);
           }}
           compact={false}
         />
