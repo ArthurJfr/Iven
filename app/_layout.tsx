@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen'; 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { AuthProvider } from '../contexts/AuthContext';
@@ -31,6 +32,7 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  SplashScreen.preventAutoHideAsync();
   return (
     <ThemeProvider>
       <AuthProvider>

@@ -56,8 +56,8 @@ const TaskCard = React.memo(({
     
     console.log('🔄 Début validation tâche:', task.id, task.title);
     
-    // Mise à jour optimiste immédiate
-    const optimisticTask = { ...task, validated_by: task.owner_id || 1 };
+    // Mise à jour optimiste immédiate: marquer comme validée (l'API renverra la valeur correcte)
+    const optimisticTask = { ...task, validated_by: task.validated_by ?? -1 };
     onTaskUpdate?.(optimisticTask);
     
     // Animation de feedback immédiat

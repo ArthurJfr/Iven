@@ -114,7 +114,7 @@ export default function ProfileScreen() {
 
           rightAction={
             {
-              icon: "edit-outline",
+              icon: "create-outline",
               onPress: () => router.push('/modals/update-profile')
             }
           }

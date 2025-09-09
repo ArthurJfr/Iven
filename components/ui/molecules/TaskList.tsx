@@ -84,8 +84,8 @@ const TaskList = React.memo(({
 
   // Mémoriser la liste des tâches pour éviter les recalculs
   const taskItems = useMemo(() => 
-    tasks.map((task, index) => (
-      <View key={`task-${task.id}-${task.validated_by || 'null'}-${index}`} style={styles.taskItem}>
+    tasks.map((task) => (
+      <View key={`task-${task.id}-${task.updated_at}-${task.validated_by ?? 'null'}`} style={styles.taskItem}>
         <TaskCard
           task={task}
           onPress={() => handleTaskPress(task)}

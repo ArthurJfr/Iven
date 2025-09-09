@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import { View, StyleSheet } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { authService } from '../services/AuthService';
 import { invitationService, type Invitation } from '../services/InvitationService';
 import { useTheme } from '../contexts/ThemeContext';
 import { spacing } from '../styles';
@@ -23,6 +23,13 @@ export default function AuthInitializer({ children }: AuthInitializerProps) {
   const segments = useSegments();
   const { isAuthenticated, isLoading, isCheckingToken } = useAuth();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+
+  // Cacher le splash quand l'UI est prête (hook toujours déclaré)
+  useEffect(() => {
+    if (!isLoading) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     if (!isLoading) {

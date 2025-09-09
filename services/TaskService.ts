@@ -253,15 +253,21 @@ class TaskService {
     try {
       console.info(`✅ Validation de la tâche ${taskId}`);
       
-      const response = await apiService.post<Task>(`${this.BASE_URL}/${taskId}/validate`);
+      const response = await apiService.post<any>(`${this.BASE_URL}/${taskId}/validate`);
       
       if (response.success) {
-        console.info('✅ Tâche validée avec succès');
+        const serverPayload = response.data as any;
+        const task: Task | undefined = serverPayload?.task || serverPayload?.data?.task || (serverPayload?.id ? serverPayload : undefined);
+        if (task && typeof task.id === 'number') {
+          console.info('✅ Tâche validée avec succès');
+          return { success: true, data: task };
+        }
+        console.error('❌ Réponse de validation inattendue:', serverPayload);
+        return { success: false, error: 'Réponse serveur inattendue lors de la validation' };
       } else {
         console.error('❌ Échec de la validation de la tâche:', response.error);
+        return { success: false, error: response.error || 'Échec de la validation' };
       }
-      
-      return response;
     } catch (error: any) {
       console.error('❌ Erreur lors de la validation de la tâche:', error);
       return {
@@ -278,15 +284,21 @@ class TaskService {
     try {
       console.info(`❌ Annulation de la validation de la tâche ${taskId}`);
       
-      const response = await apiService.delete<Task>(`${this.BASE_URL}/${taskId}/validate`);
+      const response = await apiService.delete<any>(`${this.BASE_URL}/${taskId}/validate`);
       
       if (response.success) {
-        console.info('✅ Validation de la tâche annulée avec succès');
+        const serverPayload = response.data as any;
+        const task: Task | undefined = serverPayload?.task || serverPayload?.data?.task || (serverPayload?.id ? serverPayload : undefined);
+        if (task && typeof task.id === 'number') {
+          console.info('✅ Validation de la tâche annulée avec succès');
+          return { success: true, data: task };
+        }
+        console.error('❌ Réponse d\'annulation inattendue:', serverPayload);
+        return { success: false, error: 'Réponse serveur inattendue lors de l\'annulation' };
       } else {
         console.error('❌ Échec de l\'annulation de la validation:', response.error);
+        return { success: false, error: response.error || 'Échec de l\'annulation de la validation' };
       }
-      
-      return response;
     } catch (error: any) {
       console.error('❌ Erreur lors de l\'annulation de la validation:', error);
       return {
@@ -303,13 +315,18 @@ class TaskService {
     try {
       console.info(`📋 Récupération des tâches validées par l'utilisateur ${userId}`);
       
-      const response = await apiService.get<{ tasks: Task[], count: number }>(`${this.BASE_URL}/validated-by/${userId}`);
+      const response = await apiService.get<any>(`${this.BASE_URL}/validated-by/${userId}`);
       
       if (response.success) {
-        console.info(`✅ ${response.data?.count || 0} tâches validées récupérées`);
+        const serverPayload = response.data as any;
+        const data = serverPayload?.data || serverPayload;
+        const tasks: Task[] = data?.tasks || [];
+        const count: number = typeof data?.count === 'number' ? data.count : tasks.length;
+        console.info(`✅ ${count} tâches validées récupérées`);
+        return { success: true, data: { tasks, count } };
       }
       
-      return response;
+      return { success: false, error: response.error || 'Erreur lors de la récupération des tâches validées' };
     } catch (error: any) {
       console.error('❌ Erreur lors de la récupération des tâches validées:', error);
       return {
